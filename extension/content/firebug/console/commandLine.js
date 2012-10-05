@@ -21,13 +21,14 @@ define([
     "firebug/lib/keywords",
     "firebug/console/console",
     "firebug/console/commandLineHelp",
+    "firebug/console/commandLineInclude",
     "firebug/console/commandLineExposed",
     "firebug/console/autoCompleter",
     "firebug/console/commandHistory"
 ],
 function(Obj, Firebug, FirebugReps, Locale, Events, Wrapper, Url, Css, Dom, Firefox, Win, System,
     Xpath, Str, Xml, Arr, Persist, Keywords, Console, CommandLineHelp,
-    CommandLineExposed) {
+    CommandLineInclude, CommandLineExposed) {
 
 // ********************************************************************************************* //
 // Constants
@@ -1081,14 +1082,14 @@ function FirebugCommandLineAPI(context)
             case "node":
                 XPathResultType = XPathResult.FIRST_ORDERED_NODE_TYPE;
                 break;
-                
+
             case "nodes":
                 XPathResultType = XPathResult.UNORDERED_NODE_ITERATOR_TYPE;
                 break;
         }
 
         var doc = Wrapper.unwrapObject(context.baseWindow.document);
-        
+
         return Xpath.evaluateXPath(doc, xpath, contextNode, XPathResultType);
     };
 
@@ -1453,6 +1454,7 @@ function getNoScript()
             Cc["@maone.net/noscript-service;1"].getService().wrappedJSObject;
     return this.noscript;
 }
+
 
 // ********************************************************************************************* //
 // Registration

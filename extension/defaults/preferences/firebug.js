@@ -59,6 +59,7 @@ pref("extensions.firebug.console.enableSites", false);
 pref("extensions.firebug.tabularLogMaxHeight", 200);
 pref("extensions.firebug.consoleFilterTypes", "all");
 pref("extensions.firebug.preferJSDSourceLinks", false);
+pref("extensions.firebug.consoleAliases", "{}");
 
 // HTML
 pref("extensions.firebug.showCommentNodes", false);
