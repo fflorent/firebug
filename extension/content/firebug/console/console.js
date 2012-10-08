@@ -13,7 +13,7 @@ define([
     "firebug/chrome/searchBox",
     "firebug/console/consolePanel",
     "firebug/console/commandEditor",
-    "firebug/console/functionMonitor",
+    "firebug/console/functionMonitor"
 ],
 function(Obj, Firebug, Firefox, Events, Win, Search, Xml, Options) {
 

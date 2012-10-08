@@ -782,3 +782,26 @@
     color: gray;
     padding-left: 5px;
 }
+
+
+/************************************************************************************************/
+/* include */
+.tableCommandLineInclude td{
+    height: 17px;
+}
+.tableCommandLineInclude .closeButton{
+    display: none;
+}
+
+.tableCommandLineInclude tr:hover .closeButton{
+    display: block;
+}
+.tableCommandLineInclude .url{ float: left; }
+.tableCommandLineInclude .commands{ 
+    float: right;
+    height:100%;
+}
+.tableCommandLineInclude td:last-child
+{
+    width: 75%;
+}

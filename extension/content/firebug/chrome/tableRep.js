@@ -19,10 +19,10 @@ with (Domplate) {
 FirebugReps.Table = domplate(Firebug.Rep,
 {
     className: "table",
-
+    tableClassName: "dataTable",
     tag:
         DIV({"class": "dataTableSizer", "tabindex": "-1" },
-            TABLE({"class": "dataTable", cellspacing: 0, cellpadding: 0, width: "100%",
+            TABLE({"class": "$tableClassName", cellspacing: 0, cellpadding: 0, width: "100%",
                 "role": "grid"},
                 THEAD({"class": "dataTableThead", "role": "presentation"},
                     TR({"class": "headerRow focusRow dataTableRow subFocusRow", "role": "row",
