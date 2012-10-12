@@ -14,11 +14,18 @@ define([
 function(FirebugReps, Domplate, Locale, Dom, Win, Css, Str, Options, NetUtils) {
 with (Domplate) {
 
+// ********************************************************************************************* //
+// Constants
+
 const Ci = Components.interfaces;
+
+// ********************************************************************************************* //
+// Implementation
 
 var CommandLineIncludeRep = domplate(FirebugReps.Table,
 {
     tableClassName: "tableCommandLineInclude dataTable",
+
     getValueTag: function(object)
     {
         if (object.cons === DomplateTag)
@@ -26,6 +33,7 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
         else
             return FirebugReps.Table.getValueTag(object);
     },
+
     getRowFromEvTarget: function(elem)
     {
         var row = elem;
@@ -33,48 +41,56 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
             row = row.parentNode;
         return row;
     },
+
     onDelete: function(context, aliasName, ev)
     {
-        if (window.confirm("do you really want to delete this alias : "+aliasName+" ?"))
+        if (window.confirm("do you really want to delete this alias : " + aliasName + " ?"))
         {
             var row = this.getRowFromEvTarget(ev.target);
             if (row)
                 row.parentNode.removeChild(row);
+
             var aliases = CommandLineInclude.getAliases();
             if (aliases[aliasName])
                 delete aliases[aliasName];
+
             CommandLineInclude.setAliases(aliases);
         }
     },
+
     getUrlTag: function(href, aliasName, context)
     {
-		return SPAN({style:"height:100%"}, 
-			A({"href": href, "target": "_blank", "class":"url"}, Str.cropString(href, 100)),
-			SPAN({class:"commands"},
-				IMG({
-					"src":"blank.gif",
-					"class":"closeButton ",
-					onclick: this.onDelete.bind(this, context, aliasName),
-				})
-			)
-		);
+        return SPAN({style:"height:100%"},
+            A({"href": href, "target": "_blank", "class":"url"}, Str.cropString(href, 100)),
+            SPAN({"class": "commands"},
+                IMG({
+                    "src":"blank.gif",
+                    "class":"closeButton ",
+                    onclick: this.onDelete.bind(this, context, aliasName),
+                })
+            )
+        );
     },
 
     displayAliases: function(context)
     {
-		var aliases = CommandLineInclude.getAliases();
-		var arrayToDisplay = [];
-		for (var aliasName in aliases)
-		{
-			arrayToDisplay.push({
-				"alias": SPAN(aliasName),
-				"URL": this.getUrlTag(aliases[aliasName], aliasName, context)
-			});
-		}
-		this.log(arrayToDisplay, ["alias", "URL"], context);
+        var aliases = CommandLineInclude.getAliases();
+        var arrayToDisplay = [];
+
+        for (var aliasName in aliases)
+        {
+            arrayToDisplay.push({
+                "alias": SPAN(aliasName),
+                "URL": this.getUrlTag(aliases[aliasName], aliasName, context)
+            });
+        }
+
+        this.log(arrayToDisplay, ["alias", "URL"], context);
         return Firebug.Console.getDefaultReturnValue(context.window);
     }
 });
+
+// ********************************************************************************************* //
 
 var CommandLineInclude =
 {
@@ -82,14 +98,17 @@ var CommandLineInclude =
     {
         var urlComponent = xhr.channel.URI.QueryInterface(Ci.nsIURL);
         var msg, filename = urlComponent.fileName, url = urlComponent.spec;
+
         if (newAlias)
         {
             aliases[ newAlias ] = url;
             this.setAliases(aliases);
             this.log("aliasCreated", [newAlias], [context, "info"]);
         }
+
         this.log("includeSuccess", [filename], [context, "info"]);
     },
+
     onError: function(context, xhr)
     {
         Firebug.Console.log(xhr);
@@ -100,11 +119,13 @@ var CommandLineInclude =
     {
         return JSON.parse(Options.get("consoleAliases") || "{}");
     },
+
     deleteAlias: function(aliases, aliasToDel)
     {
         delete aliases[aliasToDel];
         this.setAliases(aliases);
     },
+
     setAliases: function(aliases)
     {
         Options.set("consoleAliases", JSON.stringify(aliases));
@@ -116,6 +137,7 @@ var CommandLineInclude =
         logArgs.unshift([msg]);
         Firebug.Console.logFormatted.apply(Firebug.Console, logArgs);
     },
+
     // include(context, url[, newAlias])
     // includes a remote script
     include: function(context, url, newAlias)
@@ -126,6 +148,7 @@ var CommandLineInclude =
         var returnValue = Firebug.Console.getDefaultReturnValue(context.window);
         var acceptedSchemes = ["http", "https"];
         var msg;
+
         // checking arguments:
         if (newAlias !== undefined && typeof newAlias !== "string")
             throw "wrong alias argument; expected string";
@@ -135,11 +158,13 @@ var CommandLineInclude =
 
         if (newAlias !== undefined)
             newAlias = newAlias.toLowerCase();
+
         if ((urlIsAlias && url.length > 30) || (newAlias && newAlias.length > 30))
         {
             this.log("tooLongAliasName", [newAlias || url], [context, "error"]);
             return returnValue;
         }
+
         if (newAlias !== undefined && reNotAlias.test(newAlias))
         {
             this.log("invalidAliasName", [newAlias], [context, "error"]);
@@ -160,6 +185,7 @@ var CommandLineInclude =
                 return returnValue;
             }
         }
+
         // if the URL is null, we delete the alias
         if (newAlias !== undefined && url === null)
         {
@@ -168,21 +194,26 @@ var CommandLineInclude =
                 this.log("aliasNotFound", [newAlias], [context, "error"]);
                 return returnValue;
             }
+
             delete aliases[newAlias];
             this.setAliases(aliases);
             this.log("aliasRemoved", [newAlias], [context, "info"]);
             return returnValue;
         }
+
         var onSuccess = this.onSuccess.bind(this, aliases, newAlias, context);
         var onError = this.onError.bind(this, context);
         this.evaluateRemoteScript(url, context, onSuccess, this.onError);
+
         return returnValue;
     },
 
-    evaluateRemoteScript: function(url, context, successFunction, errorFunction){
+    evaluateRemoteScript: function(url, context, successFunction, errorFunction)
+    {
         var xhr = new XMLHttpRequest({ mozAnon: true });
         var acceptedSchemes = ["http", "https"];
         var absoluteURL = context.browser.currentURI.resolve(url);
+
         xhr.onload = function()
         {
             var contentType = xhr.getResponseHeader("Content-Type").split(";")[0];
@@ -198,14 +229,16 @@ var CommandLineInclude =
             {
                 this.log("invalidFileMime", [absoluteURL], [context, "error"]);
             }
-        };
+        }
+
         if (errorFunction)
         {
             xhr.onError = function()
             {
                 errorFunction(xhr);
-            };
+            }
         }
+
         xhr.open("GET", absoluteURL, true);
 
         if (!~acceptedSchemes.indexOf(xhr.channel.URI.scheme))
@@ -213,12 +246,17 @@ var CommandLineInclude =
             this.log("invalidRequestProtocol", [], [context, "error"]);
             return ;
         }
+
         Firebug.Console.log(xhr);
         xhr.send(null);
+
         // xxxFlorent: TODO show XHR progress
         return xhr;
     }
 };
+
+// ********************************************************************************************* //
+// Command Handler
 
 function onCommand(context, args)
 {
@@ -230,6 +268,9 @@ function onCommand(context, args)
     return CommandLineInclude.include.apply(self, args);
 }
 
+// ********************************************************************************************* //
+// Registration
+
 Firebug.registerCommand("include", {
     handler: onCommand,
     description: Locale.$STR("console.cmd.help.include"),
@@ -237,4 +278,6 @@ Firebug.registerCommand("include", {
 });
 
 return CommandLineIncludeRep;
+
+// ********************************************************************************************* //
 }});
