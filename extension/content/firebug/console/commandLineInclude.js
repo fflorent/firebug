@@ -15,10 +15,12 @@ function(FirebugReps, Domplate, Locale, Dom, Win, Css, Str, Options, NetUtils) {
 with (Domplate) {
 
 const Ci = Components.interfaces;
+const aliasLengthLimit = 200;
 
 var CommandLineIncludeRep = domplate(FirebugReps.Table,
 {
     tableClassName: "tableCommandLineInclude dataTable",
+    supportsObject: function(){ return true; },
     getValueTag: function(object)
     {
         if (object.cons === DomplateTag)
@@ -35,7 +37,7 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
     },
     onDelete: function(context, aliasName, ev)
     {
-        if (window.confirm("do you really want to delete this alias : "+aliasName+" ?"))
+        if (window.confirm(Locale.$STRF("commandline.include.confirmDelete", [aliasName])))
         {
             var row = this.getRowFromEvTarget(ev.target);
             if (row)
@@ -48,31 +50,42 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
     },
     getUrlTag: function(href, aliasName, context)
     {
-		return SPAN({style:"height:100%"}, 
-			A({"href": href, "target": "_blank", "class":"url"}, Str.cropString(href, 100)),
-			SPAN({class:"commands"},
-				IMG({
-					"src":"blank.gif",
-					"class":"closeButton ",
-					onclick: this.onDelete.bind(this, context, aliasName),
-				})
-			)
-		);
+        return SPAN({style:"height:100%"}, 
+            A({"href": href, "target": "_blank", "class":"url"}, Str.cropString(href, 100)),
+            SPAN({class:"commands"},
+                IMG({
+                    "src":"blank.gif",
+                    "class":"closeButton ",
+                    onclick: this.onDelete.bind(this, context, aliasName),
+                })
+            )
+        );
     },
-
     displayAliases: function(context)
     {
-		var aliases = CommandLineInclude.getAliases();
-		var arrayToDisplay = [];
-		for (var aliasName in aliases)
-		{
-			arrayToDisplay.push({
-				"alias": SPAN(aliasName),
-				"URL": this.getUrlTag(aliases[aliasName], aliasName, context)
-			});
-		}
-		this.log(arrayToDisplay, ["alias", "URL"], context);
+        var aliases = CommandLineInclude.getAliases();
+        var arrayToDisplay = [];
+        for (var aliasName in aliases)
+        {
+            arrayToDisplay.push({
+                "alias": SPAN(aliasName),
+                "URL": this.getUrlTag(aliases[aliasName], aliasName, context)
+            });
+        }
+        this.log(arrayToDisplay, ["alias", "URL"], context);
         return Firebug.Console.getDefaultReturnValue(context.window);
+    },
+    getContextMenuItems: function(elt, target, context)
+    {
+        alert('ok');
+        Firebug.Console.log(arguments);
+        return [
+            {
+                label: "CopyLocation",
+                tooltiptext: "clipboard.tip.Copy_Location",
+                command: function(){}//this.copyURL.bind(this, elt)
+            }
+        ];
     }
 });
 
@@ -92,7 +105,6 @@ var CommandLineInclude =
     },
     onError: function(context, xhr)
     {
-        Firebug.Console.log(xhr);
         this.log("loadFail", [xhr.channel.URI.spec], [context, "error"]);
     },
 
@@ -135,7 +147,8 @@ var CommandLineInclude =
 
         if (newAlias !== undefined)
             newAlias = newAlias.toLowerCase();
-        if ((urlIsAlias && url.length > 30) || (newAlias && newAlias.length > 30))
+        if ((urlIsAlias && url.length > aliasLengthLimit) || 
+            (newAlias && newAlias.length > aliasLengthLimit))
         {
             this.log("tooLongAliasName", [newAlias || url], [context, "error"]);
             return returnValue;
@@ -186,18 +199,18 @@ var CommandLineInclude =
         xhr.onload = function()
         {
             var contentType = xhr.getResponseHeader("Content-Type").split(";")[0];
-            if (NetUtils.mimeCategoryMap[contentType] === "js")
-            {
+            /*if (NetUtils.mimeCategoryMap[contentType] === "js")
+            {*/
                 var codeToEval = xhr.responseText;
                 var headerMatch;
                 Firebug.CommandLine.evaluateInWebPage(codeToEval, context);
                 if (successFunction)
                     successFunction(xhr);
-            }
+            /*}
             else
             {
                 this.log("invalidFileMime", [absoluteURL], [context, "error"]);
-            }
+            }*/
         };
         if (errorFunction)
         {
@@ -213,7 +226,6 @@ var CommandLineInclude =
             this.log("invalidRequestProtocol", [], [context, "error"]);
             return ;
         }
-        Firebug.Console.log(xhr);
         xhr.send(null);
         // xxxFlorent: TODO show XHR progress
         return xhr;

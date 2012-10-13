@@ -809,4 +809,5 @@
 .tableCommandLineInclude td:last-child
 {
     width: 75%;
+    padding-right: 0 !important; 
 }
