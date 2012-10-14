@@ -165,13 +165,13 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
                 command: System.copyToClipboard.bind(System, url)
             },
             {
-                label: "EditAlias",
+                label: "commandline.label.EditAlias",
                 id: "fbEditAlias",
                 tooltiptext: "commandline.tip.Edit_Alias",
                 command: this.editAlias.bind(this, tr)
             },
             {
-                label: "DeleteAlias",
+                label: "commandline.label.DeleteAlias",
                 id: "fbDeleteAlias",
                 tooltiptext: "commandline.tip.Delete_Alias",
                 command: this.deleteAlias.bind(this, aliasName, ev)
@@ -188,7 +188,7 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
         if (ScratchpadManager)
         {
             items.push({
-                label: "OpenInScratchpad",
+                label: "commandline.label.OpenInScratchpad",
                 id: "fbOpenInScratchpad",
                 tooltiptext: "commandline.tip.Open_In_Scratchpad",
                 command: this.openInScratchpad.bind(this, url)
