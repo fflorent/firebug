@@ -352,7 +352,8 @@ Firebug.CommandLine = Obj.extend(Firebug.Module,
 
     evaluateInWebPage: function(expr, context, targetWindow)
     {
-        var win = targetWindow || context.window;
+        var win = targetWindow ? targetWindow :
+            (context.baseWindow ? context.baseWindow : context.window);
         var element = Dom.addScript(win.document, "_firebugInWebPage", expr);
         if (!element)
             return;

@@ -12,7 +12,7 @@ function(Wrapper, Events) {
 // List of command line APIs
 var commands = ["$", "$$", "$x", "$n", "cd", "clear", "inspect", "keys",
     "values", "debug", "undebug", "monitor", "unmonitor", "traceCalls", "untraceCalls",
-    "traceAll", "untraceAll", "copy", "include" /*, "memoryProfile", "memoryProfileEnd"*/];
+    "traceAll", "untraceAll", "copy" /*, "memoryProfile", "memoryProfileEnd"*/];
 
 // List of shortcuts for some console methods
 var consoleShortcuts = ["dir", "dirxml", "table"];
