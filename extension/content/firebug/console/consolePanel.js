@@ -70,7 +70,7 @@ Firebug.ConsolePanel.prototype = Obj.extend(Firebug.ActivablePanel,
     name: "console",
     searchable: true,
     breakable: true,
-    editable: false,
+    editable: true,
     enableA11y: true,
 
     initialize: function()

@@ -11,6 +11,7 @@ define([
     "firebug/lib/options",
     "firebug/chrome/menu",
     "firebug/lib/system",
+    "firebug/editor/editor",
 ],
 function(FirebugReps, Domplate, Locale, Dom, Win, Css, Str, Options, Menu, System) {
 with (Domplate) {
@@ -55,7 +56,8 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
     getUrlTag: function(href, aliasName, context)
     {
         return SPAN({style:"height:100%"},
-            A({"href": href, "target": "_blank", "class":"url"}, Str.cropString(href, 100)),
+            A({"href": href, "target": "_blank", "class":"url"},
+                Str.cropString(href, 100)),
             SPAN({"class": "commands"},
                 IMG({
                     "src":"blank.gif",
@@ -99,9 +101,14 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
         }
     },
 
-    editAlias: function(tr)
+    editAliasName: function(tr)
     {
-        // TODO ...
+        Firebug.Editor.startEditing(tr.querySelector(".aliasName"));
+    },
+
+    editAliasURL: function(tr)
+    {
+        Firebug.Editor.startEditing(tr.querySelector(".url"));
     },
 
     openInScratchpad: function(url)
@@ -151,6 +158,18 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
         xhr.send(null);
     },
 
+    openNewTab: function(url)
+    {
+        // NOTE: in order to prevent from passing unwanted arguments (like the "commands" object)
+        // we call Win.openNewTab in separate function
+        Win.openNewTab(url);
+    },
+
+    copyToClipboard: function(content)
+    {
+        System.copyToClipboard(content);
+    },
+
     getContextMenuItems: function(ev, tr)
     {
         var url = tr.querySelector("a.url").href;
@@ -162,13 +181,19 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
                 label: "CopyLocation",
                 id: "fbCopyLocation",
                 tooltiptext: "clipboard.tip.Copy_Location",
-                command: System.copyToClipboard.bind(System, url)
+                command: this.copyToClipboard.bind(this, url)
             },
             {
-                label: "commandline.label.EditAlias",
-                id: "fbEditAlias",
-                tooltiptext: "commandline.tip.Edit_Alias",
-                command: this.editAlias.bind(this, tr)
+                label: "commandline.label.EditAliasName",
+                id: "fbEditAliasName",
+                tooltiptext: "commandline.tip.Edit_Alias_Name",
+                command: this.editAliasName.bind(this, tr)
+            },
+            {
+                label: "commandline.label.EditAliasURL",
+                id: "fbEditAliasUrl",
+                tooltiptext: "commandline.tip.Edit_Alias_URL",
+                command: this.editAliasURL.bind(this, tr)
             },
             {
                 label: "commandline.label.DeleteAlias",
@@ -181,7 +206,7 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
                 label: "OpenInTab",
                 id: "fbOpenInTab",
                 tooltiptext: "firebug.tip.Open_In_Tab",
-                command: Win.openNewTab.bind(Win, url)
+                command: this.openNewTab.bind(this, url)
             }
         ];
 
@@ -243,9 +268,9 @@ var CommandLineInclude =
         this.log("includeSuccess", [filename], [context, "info"]);
     },
 
-    onError: function(context, xhr)
+    onError: function(context, url)
     {
-        this.log("loadFail", [xhr.channel.URI.spec], [context, "error"]);
+        this.log("loadFail", [url], [context, "error"]);
     },
 
     getAliases: function()
@@ -264,11 +289,20 @@ var CommandLineInclude =
         Options.set("consoleAliases", JSON.stringify(aliases));
     },
 
+    animateLoadingMessage: function(row, message, iteration)
+    {
+        if (!row || row.parentNode === null)
+            return;
+        var dots = "...".substr(3-iteration%4);
+        row.querySelector(".objectBox-text").textContent = message + dots;
+        setTimeout(this.animateLoadingMessage, 1000, row, message, iteration+1);
+    },
+
     log: function(localeStr, localeArgs, logArgs)
     {
         var msg = Locale.$STRF("commandline.include."+localeStr, localeArgs);
         logArgs.unshift([msg]);
-        Firebug.Console.logFormatted.apply(Firebug.Console, logArgs);
+        return Firebug.Console.logFormatted.apply(Firebug.Console, logArgs);
     },
 
     // include(context, url[, newAlias])
@@ -333,17 +367,18 @@ var CommandLineInclude =
             this.log("aliasRemoved", [newAlias], [context, "info"]);
             return returnValue;
         }
-
+        //var rowLoading = this.log("loading", [], [context, "info"]);
+        //var loadingRow = this.animateLoadingMessage(rowLoading, rowLoading.textContent, 0);
         var onSuccess = this.onSuccess.bind(this, aliases, newAlias, context);
         var onError = this.onError.bind(this, context);
-        this.evaluateRemoteScript(url, context, onSuccess, this.onError);
+        this.evaluateRemoteScript(url, context, onSuccess, onError);
 
         return returnValue;
     },
 
     evaluateRemoteScript: function(url, context, successFunction, errorFunction)
     {
-        var xhr = new XMLHttpRequest({ mozAnon: true });
+        var xhr = new XMLHttpRequest({ mozAnon: true, timeout:30});
         var acceptedSchemes = ["http", "https"];
         var absoluteURL = context.browser.currentURI.resolve(url);
 
@@ -359,9 +394,9 @@ var CommandLineInclude =
 
         if (errorFunction)
         {
-            xhr.onError = function()
+            xhr.ontimeout = xhr.onerror = function()
             {
-                errorFunction(xhr);
+                errorFunction(url);
             }
         }
 
