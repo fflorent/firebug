@@ -101,14 +101,23 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
         }
     },
 
+    startEditing: function(target)
+    {
+        // xxxFlorent: clumsy ?
+        var editor = this.getEditor(target.ownerDocument);
+        Firebug.Editor.startEditing(target, target.textContent, editor);
+    },
+
     editAliasName: function(tr)
     {
-        Firebug.Editor.startEditing(tr.querySelector(".aliasName"));
+        var target = tr.querySelector(".aliasName");
+        this.startEditing(target);
     },
 
     editAliasURL: function(tr)
     {
-        Firebug.Editor.startEditing(tr.querySelector(".url"));
+        var target = tr.querySelector(".url");
+        this.startEditing(target);
     },
 
     openInScratchpad: function(url)
@@ -246,6 +255,12 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
 
         popup.openPopupAtScreen(event.screenX, event.screenY, true);
         return true;
+    },
+    getEditor: function(doc)
+    {
+        if (!this.editor)
+            this.editor = new IncludeEditor(doc);
+        return this.editor;
     }
 });
 
@@ -253,7 +268,7 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
 
 var CommandLineInclude =
 {
-    onSuccess: function(aliases, newAlias, context, xhr)
+    onSuccess: function(aliases, newAlias, context, options, xhr)
     {
         var urlComponent = xhr.channel.URI.QueryInterface(Ci.nsIURL);
         var msg, filename = urlComponent.fileName, url = urlComponent.spec;
@@ -264,8 +279,8 @@ var CommandLineInclude =
             this.setAliases(aliases);
             this.log("aliasCreated", [newAlias], [context, "info"]);
         }
-
-        this.log("includeSuccess", [filename], [context, "info"]);
+        if (!options.onlyUpdate)
+            this.log("includeSuccess", [filename], [context, "info"]);
     },
 
     onError: function(context, url)
@@ -305,9 +320,9 @@ var CommandLineInclude =
         return Firebug.Console.logFormatted.apply(Firebug.Console, logArgs);
     },
 
-    // include(context, url[, newAlias])
+    // include(context, url[, newAliasi, options])
     // includes a remote script
-    include: function(context, url, newAlias)
+    include: function(context, url, newAlias, options)
     {
         var reNotAlias = /[\.\/]/;
         var urlIsAlias = url !== null && !reNotAlias.test(url);
@@ -371,12 +386,12 @@ var CommandLineInclude =
         //var loadingRow = this.animateLoadingMessage(rowLoading, rowLoading.textContent, 0);
         var onSuccess = this.onSuccess.bind(this, aliases, newAlias, context);
         var onError = this.onError.bind(this, context);
-        this.evaluateRemoteScript(url, context, onSuccess, onError);
+        this.evaluateRemoteScript(url, context, options, onSuccess, onError);
 
         return returnValue;
     },
 
-    evaluateRemoteScript: function(url, context, successFunction, errorFunction)
+    evaluateRemoteScript: function(url, context, options, successFunction, errorFunction)
     {
         var xhr = new XMLHttpRequest({ mozAnon: true, timeout:30});
         var acceptedSchemes = ["http", "https"];
@@ -387,9 +402,10 @@ var CommandLineInclude =
             var contentType = xhr.getResponseHeader("Content-Type").split(";")[0];
             var codeToEval = xhr.responseText;
             var headerMatch;
-            Firebug.CommandLine.evaluateInWebPage(codeToEval, context);
+            if (!options.onlyUpdate)
+                Firebug.CommandLine.evaluateInWebPage(codeToEval, context);
             if (successFunction)
-                successFunction(xhr);
+                successFunction(options, xhr);
         }
 
         if (errorFunction)
@@ -427,6 +443,46 @@ function onCommand(context, args)
     Array.unshift(args, context);
     return CommandLineInclude.include.apply(self, args);
 }
+
+// ********************************************************************************************* //
+// Local Helpers
+function IncludeEditor(doc)
+{
+    Firebug.InlineEditor.call(this, doc);
+}
+
+IncludeEditor.prototype = domplate(Firebug.InlineEditor.prototype,
+{
+    endEditing: function(target, value, cancel)
+    {
+        if (cancel)
+            return;
+        var context = Firebug.currentContext;
+        if (Css.hasClass(target, "aliasName"))
+            this.updateAliasName(target, value, context);
+        else if (Css.hasClass(target, "url"))
+            this.updateURL(target, value, context);
+    },
+
+    updateURL: function(target, value, context)
+    {
+        var tr = Dom.getAncestorByTagName(target, "tr");
+        var aliasName = tr.querySelector(".aliasName").textContent;
+        CommandLineInclude.include(context, value, aliasName, {"onlyUpdate":true});
+        target.textContent = value;
+    },
+
+    updateAliasName: function(target, value, context)
+    {
+        var oldAliasName = target.textContent;
+        var aliases = CommandLineInclude.getAliases();
+        var url = aliases[oldAliasName];
+        delete aliases[oldAliasName];
+        aliases[value] = url;
+        CommandLineInclude.setAliases(aliases);
+        target.textContent = value;
+    }
+});
 
 // ********************************************************************************************* //
 // Registration
