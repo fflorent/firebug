@@ -58,12 +58,15 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
         return SPAN({style:"height:100%"},
             A({"href": href, "target": "_blank", "class":"url"},
                 Str.cropString(href, 100)),
-            SPAN({"class": "commands"},
+            SPAN({"class": "commands"}
+                // xxxFlorent: temporarily disabled, see: 
+                //    http://code.google.com/p/fbug/issues/detail?id=5878#c27
+                /*,
                 IMG({
                     "src":"blank.gif",
                     "class":"closeButton ",
                     onclick: this.deleteAlias.bind(this, aliasName),
-                })
+                })*/
             )
         );
     },
@@ -187,11 +190,20 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
 
         var items = [
             {
+                label: "commandline.label.CopyAliasName",
+                id: "fbCopyAliasName",
+                tooltiptext: "commandline.tip.Copy_Alias_Name",
+                command: this.copyToClipboard.bind(this, aliasName)
+            },
+            {
                 label: "CopyLocation",
                 id: "fbCopyLocation",
                 tooltiptext: "clipboard.tip.Copy_Location",
                 command: this.copyToClipboard.bind(this, url)
             },
+            // xxxFlorent: temporarily disabled, see: 
+            //    http://code.google.com/p/fbug/issues/detail?id=5878#c27
+            /*"-",
             {
                 label: "commandline.label.EditAliasName",
                 id: "fbEditAliasName",
@@ -209,7 +221,7 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
                 id: "fbDeleteAlias",
                 tooltiptext: "commandline.tip.Delete_Alias",
                 command: this.deleteAlias.bind(this, aliasName, ev)
-            },
+            },*/
             "-",
             {
                 label: "OpenInTab",
@@ -234,6 +246,7 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
 
     onContextMenu: function(event)
     {
+        event.preventDefault();
         var target = Dom.getAncestorByTagName(event.target, "tr");
 
         if (target === null)
@@ -243,7 +256,7 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
         // this would also be called in console/commandEditor.js:159 and in editor/editor.js:968
 
         // good popup ?
-        var popup = document.getElementById("fbCommandEditorPopup");
+        var popup = document.getElementById("fbIncludePopup");
         Dom.eraseNode(popup);
 
         var items = this.getContextMenuItems(event, target);
@@ -254,8 +267,9 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
             return false;
 
         popup.openPopupAtScreen(event.screenX, event.screenY, true);
-        return true;
+        return false;
     },
+
     getEditor: function(doc)
     {
         if (!this.editor)
@@ -268,7 +282,7 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
 
 var CommandLineInclude =
 {
-    onSuccess: function(aliases, newAlias, context, options, xhr)
+    onSuccess: function(aliases, newAlias, context, xhr)
     {
         var urlComponent = xhr.channel.URI.QueryInterface(Ci.nsIURL);
         var msg, filename = urlComponent.fileName, url = urlComponent.spec;
@@ -279,8 +293,7 @@ var CommandLineInclude =
             this.setAliases(aliases);
             this.log("aliasCreated", [newAlias], [context, "info"]);
         }
-        if (!options.onlyUpdate)
-            this.log("includeSuccess", [filename], [context, "info"]);
+        this.log("includeSuccess", [filename], [context, "info"]);
     },
 
     onError: function(context, url)
@@ -320,9 +333,9 @@ var CommandLineInclude =
         return Firebug.Console.logFormatted.apply(Firebug.Console, logArgs);
     },
 
-    // include(context, url[, newAliasi, options])
+    // include(context, url[, newAliasi])
     // includes a remote script
-    include: function(context, url, newAlias, options)
+    include: function(context, url, newAlias)
     {
         var reNotAlias = /[\.\/]/;
         var urlIsAlias = url !== null && !reNotAlias.test(url);
@@ -386,12 +399,12 @@ var CommandLineInclude =
         //var loadingRow = this.animateLoadingMessage(rowLoading, rowLoading.textContent, 0);
         var onSuccess = this.onSuccess.bind(this, aliases, newAlias, context);
         var onError = this.onError.bind(this, context);
-        this.evaluateRemoteScript(url, context, options, onSuccess, onError);
+        this.evaluateRemoteScript(url, context, onSuccess, onError);
 
         return returnValue;
     },
 
-    evaluateRemoteScript: function(url, context, options, successFunction, errorFunction)
+    evaluateRemoteScript: function(url, context, successFunction, errorFunction)
     {
         var xhr = new XMLHttpRequest({ mozAnon: true, timeout:30});
         var acceptedSchemes = ["http", "https"];
@@ -402,10 +415,9 @@ var CommandLineInclude =
             var contentType = xhr.getResponseHeader("Content-Type").split(";")[0];
             var codeToEval = xhr.responseText;
             var headerMatch;
-            if (!options.onlyUpdate)
-                Firebug.CommandLine.evaluateInWebPage(codeToEval, context);
+            Firebug.CommandLine.evaluateInWebPage(codeToEval, context);
             if (successFunction)
-                successFunction(options, xhr);
+                successFunction(xhr);
         }
 
         if (errorFunction)
