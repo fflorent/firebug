@@ -37,6 +37,8 @@ catch(ex)
     // Scratchpad does not exists (when using Seamonkey ...)
 }
 
+Cu.import("resource://firebug/storageService.js");
+
 // ********************************************************************************************* //
 // Implementation
 
@@ -73,14 +75,16 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
 
     displayAliases: function(context)
     {
-        var aliases = CommandLineInclude.getAliases();
+        var store = CommandLineInclude.getStore();
+        var keys = store.getKeys();
         var arrayToDisplay = [];
 
-        for (var aliasName in aliases)
+        for (var i = 0; i < keys.length; i++)
         {
+            var aliasName = keys[i];
             arrayToDisplay.push({
                 "alias": SPAN({"class":"aliasName"}, aliasName),
-                "URL": this.getUrlTag(aliases[aliasName], aliasName, context)
+                "URL": this.getUrlTag(store.getItem(aliasName), aliasName, context)
             });
         }
 
@@ -96,11 +100,8 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
             if (row)
                 row.parentNode.removeChild(row);
 
-            var aliases = CommandLineInclude.getAliases();
-            if (aliases[aliasName])
-                delete aliases[aliasName];
-
-            CommandLineInclude.setAliases(aliases);
+            var store = CommandLineInclude.getStore();
+            store.removeItem(aliasName);
         }
     },
 
@@ -182,11 +183,17 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
         System.copyToClipboard(content);
     },
 
+    include: function(context, aliasName)
+    {
+        CommandLineInclude.include(context, aliasName);
+    },
+
     getContextMenuItems: function(ev, tr)
     {
         var url = tr.querySelector("a.url").href;
         // xxxFlorent: not so pretty ...
         var aliasName = tr.querySelector(".aliasName").textContent;
+        var context = Firebug.currentContext;
 
         var items = [
             {
@@ -222,6 +229,13 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
                 tooltiptext: "commandline.tip.Delete_Alias",
                 command: this.deleteAlias.bind(this, aliasName, ev)
             },*/
+            "-",
+            {
+                label: Locale.$STRF("commandline.label.IncludeScript", [aliasName]),
+                id: "fbInclude",
+                tooltiptext: "commandline.tip.Include_Script",
+                command: this.include.bind(this, context, aliasName)
+            },
             "-",
             {
                 label: "OpenInTab",
@@ -282,15 +296,17 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
 
 var CommandLineInclude =
 {
-    onSuccess: function(aliases, newAlias, context, xhr)
+    onSuccess: function(aliases, newAlias, context, loadingMsgRow, xhr)
     {
         var urlComponent = xhr.channel.URI.QueryInterface(Ci.nsIURL);
         var msg, filename = urlComponent.fileName, url = urlComponent.spec;
+        // clear the message saying "loading..."
+        loadingMsgRow.parentNode.removeChild(loadingMsgRow);
 
         if (newAlias)
         {
-            aliases[ newAlias ] = url;
-            this.setAliases(aliases);
+            var store = this.getStore();
+            store.setItem(newAlias, url);
             this.log("aliasCreated", [newAlias], [context, "info"]);
         }
         this.log("includeSuccess", [filename], [context, "info"]);
@@ -298,12 +314,15 @@ var CommandLineInclude =
 
     onError: function(context, url)
     {
+        loadingMsgRow.parentNode.removeChild(loadingMsgRow);
         this.log("loadFail", [url], [context, "error"]);
     },
 
-    getAliases: function()
+    getStore: function()
     {
-        return JSON.parse(Options.get("consoleAliases") || "{}");
+        if (!this.store)
+            this.store = StorageService.getStorage("includeAliases.json");
+        return this.store;
     },
 
     deleteAlias: function(aliases, aliasToDel)
@@ -312,18 +331,13 @@ var CommandLineInclude =
         this.setAliases(aliases);
     },
 
-    setAliases: function(aliases)
-    {
-        Options.set("consoleAliases", JSON.stringify(aliases));
-    },
-
     animateLoadingMessage: function(row, message, iteration)
     {
         if (!row || row.parentNode === null)
             return;
         var dots = "...".substr(3-iteration%4);
         row.querySelector(".objectBox-text").textContent = message + dots;
-        setTimeout(this.animateLoadingMessage, 1000, row, message, iteration+1);
+        setTimeout(CommandLineInclude.animateLoadingMessage, 500, row, message, iteration+1);
     },
 
     log: function(localeStr, localeArgs, logArgs)
@@ -366,14 +380,11 @@ var CommandLineInclude =
             return returnValue;
         }
 
-        // we get the custom aliases
-        if (newAlias !== undefined || urlIsAlias)
-            aliases = this.getAliases();
-
         if (urlIsAlias)
         {
+            var store = this.getStore();
             var aliasName = url.toLowerCase();
-            url = aliases[aliasName];
+            url = store.getItem(aliasName);
             if (url === undefined)
             {
                 this.log("aliasNotFound", [aliasName], [context, "error"]);
@@ -384,21 +395,21 @@ var CommandLineInclude =
         // if the URL is null, we delete the alias
         if (newAlias !== undefined && url === null)
         {
-            if (aliases[newAlias] === undefined)
+            var store = this.getStore();
+            if (store.getItem(newAlias) === undefined)
             {
                 this.log("aliasNotFound", [newAlias], [context, "error"]);
                 return returnValue;
             }
 
-            delete aliases[newAlias];
-            this.setAliases(aliases);
+            store.removeItem(newAlias);
             this.log("aliasRemoved", [newAlias], [context, "info"]);
             return returnValue;
         }
-        //var rowLoading = this.log("loading", [], [context, "info"]);
-        //var loadingRow = this.animateLoadingMessage(rowLoading, rowLoading.textContent, 0);
-        var onSuccess = this.onSuccess.bind(this, aliases, newAlias, context);
-        var onError = this.onError.bind(this, context);
+        var loadingMsgRow = this.log("loading", [], [context, "info", true]);
+        this.animateLoadingMessage(loadingMsgRow, loadingMsgRow.textContent, 0);
+        var onSuccess = this.onSuccess.bind(this, aliases, newAlias, context, loadingMsgRow);
+        var onError = this.onError.bind(this, context, loadingMsgRow);
         this.evaluateRemoteScript(url, context, onSuccess, onError);
 
         return returnValue;
@@ -487,11 +498,10 @@ IncludeEditor.prototype = domplate(Firebug.InlineEditor.prototype,
     updateAliasName: function(target, value, context)
     {
         var oldAliasName = target.textContent;
-        var aliases = CommandLineInclude.getAliases();
-        var url = aliases[oldAliasName];
-        delete aliases[oldAliasName];
-        aliases[value] = url;
-        CommandLineInclude.setAliases(aliases);
+        var store = CommandLineInclude.getStore();
+        var url = store.getItem(oldAliasName);
+        store.removeItem(oldAliasName);
+        store.setItem(value, url);
         target.textContent = value;
     }
 });
