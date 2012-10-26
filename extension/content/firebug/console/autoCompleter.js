@@ -682,7 +682,7 @@ Firebug.JSAutoCompleter = function(textBox, completionBox, options)
 
         var title = this.completionPopup.ownerDocument.
             createElementNS("http://www.w3.org/1999/xhtml","div");
-        title.innerHTML = Locale.$STR("console.Use Arrow keys, Tab or Enter");
+        title.textContent = Locale.$STR("console.Use Arrow keys, Tab or Enter");
         title.classList.add("fbPopupTitle");
         vbox.appendChild(title);
 
@@ -2070,7 +2070,7 @@ function autoCompleteEval(context, preExpr, spreExpr, includeCurrentScope)
         {
             // Complete variables from the local scope
 
-            var contentView = Wrapper.getContentView(context.window);
+            var contentView = Wrapper.getContentView(context.baseWindow || context.window);
             if (context.stopped && includeCurrentScope)
             {
                 out.completions = Firebug.Debugger.getCurrentFrameKeys(context);

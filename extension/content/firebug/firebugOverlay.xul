@@ -39,6 +39,8 @@
 
         <!-- Context menu for the Command Editor -->
         <menupopup id="fbCommandEditorPopup" />
+        <!-- Context menu for the include() table -->
+        <menupopup id="fbIncludePopup" />
     </popupset>
 
     <!-- Main UI -->
