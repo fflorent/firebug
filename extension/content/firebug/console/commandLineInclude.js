@@ -42,7 +42,7 @@ Cu.import("resource://firebug/storageService.js");
 // ********************************************************************************************* //
 // Implementation
 
-var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugReps.Table,
+var CommandLineIncludeRep = domplate(FirebugReps.Table,
 {
     tag: FirebugReps.OBJECTBOX( {"oncontextmenu":"$onContextMenu"}, FirebugReps.Table.tag ),
     tableClassName: "tableCommandLineInclude dataTable",
@@ -83,7 +83,7 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
         {
             var aliasName = keys[i];
             arrayToDisplay.push({
-                "alias": SPAN({"class":"aliasName"}, aliasName),
+                "alias": SPAN({"class":"aliasName", "data-aliasname":aliasName}, aliasName),
                 "URL": this.getUrlTag(store.getItem(aliasName), aliasName, context)
             });
         }
@@ -107,9 +107,8 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
 
     startEditing: function(target)
     {
-        // xxxFlorent: clumsy ?
         var editor = this.getEditor(target.ownerDocument);
-        Firebug.Editor.startEditing(target, target.textContent, editor);
+        Firebug.Editor.startEditing(target, target.dataset.aliasname, editor);
     },
 
     editAliasName: function(tr)
@@ -192,7 +191,7 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
     {
         var url = tr.querySelector("a.url").href;
         // xxxFlorent: not so pretty ...
-        var aliasName = tr.querySelector(".aliasName").textContent;
+        var aliasName = tr.querySelector(".aliasName").dataset.aliasname;
         var context = Firebug.currentContext;
 
         var items = [
@@ -265,11 +264,7 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
 
         if (target === null)
                 return;
-        // xxxFlorent: we should implement a common function that do that work
-        // for example: openMenu(items[, popup]);
-        // this would also be called in console/commandEditor.js:159 and in editor/editor.js:968
-
-        // good popup ?
+        // xxxFlorent: FIXME use fbContextMenu...
         var popup = document.getElementById("fbIncludePopup");
         Dom.eraseNode(popup);
 
@@ -331,15 +326,6 @@ var CommandLineInclude =
         this.setAliases(aliases);
     },
 
-    animateLoadingMessage: function(row, message, iteration)
-    {
-        if (!row || row.parentNode === null)
-            return;
-        var dots = "...".substr(3-iteration%4);
-        row.querySelector(".objectBox-text").textContent = message + dots;
-        setTimeout(CommandLineInclude.animateLoadingMessage, 500, row, message, iteration+1);
-    },
-
     log: function(localeStr, localeArgs, logArgs)
     {
         var msg = Locale.$STRF("commandline.include."+localeStr, localeArgs);
@@ -347,7 +333,7 @@ var CommandLineInclude =
         return Firebug.Console.logFormatted.apply(Firebug.Console, logArgs);
     },
 
-    // include(context, url[, newAliasi])
+    // include(context, url[, newAlias])
     // includes a remote script
     include: function(context, url, newAlias)
     {
@@ -406,8 +392,8 @@ var CommandLineInclude =
             this.log("aliasRemoved", [newAlias], [context, "info"]);
             return returnValue;
         }
-        var loadingMsgRow = this.log("loading", [], [context, "info", true]);
-        this.animateLoadingMessage(loadingMsgRow, loadingMsgRow.textContent, 0);
+        var loadingMsg = Locale.$STR("Loading");
+        var loadingMsgRow = Firebug.Console.logFormatted([loadingMsg], context, "loading", true);
         var onSuccess = this.onSuccess.bind(this, aliases, newAlias, context, loadingMsgRow);
         var onError = this.onError.bind(this, context, loadingMsgRow);
         this.evaluateRemoteScript(url, context, onSuccess, onError);
@@ -502,6 +488,7 @@ IncludeEditor.prototype = domplate(Firebug.InlineEditor.prototype,
         var url = store.getItem(oldAliasName);
         store.removeItem(oldAliasName);
         store.setItem(value, url);
+        target.dataset.aliasname = value;
         target.textContent = value;
     }
 });
