@@ -28,8 +28,8 @@ var ScratchpadManager;
 
 try
 {
-    let sc = {};
-    Cu.import("resource:///modules/devtools/scratchpad-manager.jsm", sc);
+    var scope = {};
+    Cu.import("resource:///modules/devtools/scratchpad-manager.jsm", scope);
     ScratchpadManager = sc.ScratchpadManager;
 }
 catch(ex)
@@ -44,8 +44,15 @@ Cu.import("resource://firebug/storageService.js");
 
 var CommandLineIncludeRep = domplate(FirebugReps.Table,
 {
-    tag: FirebugReps.OBJECTBOX( {"oncontextmenu":"$onContextMenu"}, FirebugReps.Table.tag ),
     tableClassName: "tableCommandLineInclude dataTable",
+
+    tag:
+        FirebugReps.OBJECTBOX({"oncontextmenu": "$onContextMenu"},
+            FirebugReps.Table.tag
+        ),
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    // Domplate Handlers
 
     getValueTag: function(object)
     {
@@ -57,10 +64,12 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
 
     getUrlTag: function(href, aliasName, context)
     {
-        return SPAN({style:"height:100%"},
-            A({"href": href, "target": "_blank", "class":"url"},
-                Str.cropString(href, 100)),
-            SPAN({"class": "commands"}
+        var urlTag =
+            SPAN({style:"height:100%"},
+                A({"href": href, "target": "_blank", "class":"url"},
+                    Str.cropString(href, 100)
+                ),
+                SPAN({"class": "commands"}
                 // xxxFlorent: temporarily disabled, see: 
                 //    http://code.google.com/p/fbug/issues/detail?id=5878#c27
                 /*,
@@ -69,8 +78,10 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
                     "class":"closeButton ",
                     onclick: this.deleteAlias.bind(this, aliasName),
                 })*/
-            )
-        );
+                )
+            );
+
+        return urlTag;
     },
 
     displayAliases: function(context)
@@ -79,11 +90,11 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
         var keys = store.getKeys();
         var arrayToDisplay = [];
 
-        for (var i = 0; i < keys.length; i++)
+        for (var i=0; i<keys.length; i++)
         {
             var aliasName = keys[i];
             arrayToDisplay.push({
-                "alias": SPAN({"class":"aliasName", "data-aliasname":aliasName}, aliasName),
+                "alias": SPAN({"class":"aliasName", "data-aliasname": aliasName}, aliasName),
                 "URL": this.getUrlTag(store.getItem(aliasName), aliasName, context)
             });
         }
@@ -128,14 +139,17 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
         var spWin = ScratchpadManager.openScratchpad();
         var scriptContent = null;
         var editor = null;
+
         spWin.onload = function()
         {
             var spInstance = spWin.Scratchpad;
             //intro = spInstance.strings.GetStringFromName("scratchpadIntro");
-            spInstance.addObserver({
+            spInstance.addObserver(
+            {
                 onReady: function()
                 {
                     editor = spInstance.editor;
+
                     // if the content of the script is loaded, we write the content in the editor
                     // otherwise, we write a text that asks the user to wait
                     if (scriptContent)
@@ -152,8 +166,10 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
         xhr.onload = function()
         {
             if (spWin.closed)
-                 return;
+                return;
+
             scriptContent = xhr.responseText;
+
             // if the editor is ready, we put the content on it now
             // otherwise, we wait for the editor
             if (editor)
@@ -164,6 +180,7 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
         {
             if (spWin.closed)
                 return;
+
             spInstance.setText("// error while loading the script", startTextIndex);
         }
 
@@ -263,7 +280,8 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
         var target = Dom.getAncestorByTagName(event.target, "tr");
 
         if (target === null)
-                return;
+            return;
+
         // xxxFlorent: FIXME use fbContextMenu...
         var popup = document.getElementById("fbIncludePopup");
         Dom.eraseNode(popup);
@@ -304,6 +322,7 @@ var CommandLineInclude =
             store.setItem(newAlias, url);
             this.log("aliasCreated", [newAlias], [context, "info"]);
         }
+
         this.log("includeSuccess", [filename], [context, "info"]);
     },
 
@@ -455,6 +474,7 @@ function onCommand(context, args)
 
 // ********************************************************************************************* //
 // Local Helpers
+
 function IncludeEditor(doc)
 {
     Firebug.InlineEditor.call(this, doc);
@@ -466,6 +486,7 @@ IncludeEditor.prototype = domplate(Firebug.InlineEditor.prototype,
     {
         if (cancel)
             return;
+
         var context = Firebug.currentContext;
         if (Css.hasClass(target, "aliasName"))
             this.updateAliasName(target, value, context);
