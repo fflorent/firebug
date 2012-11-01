@@ -1257,18 +1257,20 @@ this.typeCommand = function(string, useCommandEditor)
  * @param {String} expected Expected value displayed.
  * @param {String} tagName Name of the displayed element.
  * @param {String} class Class of the displayed element.
+ * @param {Boolean} if set to false, does not clear the console logs
  */
-this.executeCommandAndVerify = function(callback, expression, expected, tagName, classes)
+this.executeCommandAndVerify = function(callback, expression, expected, tagName, classes, clear)
 {
-    FBTest.clearConsole();
+    if (clear !== false)
+        FBTest.clearConsole();
 
     var config = {tagName: tagName, classes: classes};
     FBTest.waitForDisplayedElement("console", config, function(row)
     {
         FBTest.compare(expected, row.textContent, "Verify: " +
             expression + " SHOULD BE " + expected);
-
-        FBTest.clearConsole();
+        if (clear !== false)
+            FBTest.clearConsole();
 
         if (callback)
             callback();

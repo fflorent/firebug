@@ -12,9 +12,10 @@ define([
     "firebug/chrome/menu",
     "firebug/lib/system",
     "firebug/lib/xpcom",
+    "firebug/lib/object",
     "firebug/editor/editor",
 ],
-function(FirebugReps, Domplate, Locale, Dom, Win, Css, Str, Options, Menu, System, Xpcom) {
+function(FirebugReps, Domplate, Locale, Dom, Win, Css, Str, Options, Menu, System, Xpcom, Obj) {
 with (Domplate) {
 
 // ********************************************************************************************* //
@@ -50,7 +51,7 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
     tableClassName: "tableCommandLineInclude dataTable",
 
     tag:
-        FirebugReps.OBJECTBOX({"oncontextmenu": "$onContextMenu"},
+        FirebugReps.OBJECTBOX({},
             FirebugReps.Table.tag
         ),
 
@@ -108,6 +109,9 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
 
     deleteAlias: function(aliasName, ev)
     {
+        // NOTE: that piece of code has not been tested since deleting aliases through the table 
+        // has been disabled.
+        // Once it is enabled again, make sure FBTests is available for this feature
         var store = CommandLine.getStore();
         if (! Options.get(removeConfirmation))
         {
@@ -200,42 +204,17 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
         xhr.send(null);
     },
 
-    openNewTab: function(url)
-    {
-        // NOTE: in order to prevent from passing unwanted arguments (like the "commands" object)
-        // we call Win.openNewTab in separate function
-        Win.openNewTab(url);
-    },
-
-    copyToClipboard: function(content)
-    {
-        System.copyToClipboard(content);
-    },
-
-    include: function(context, aliasName)
-    {
-        CommandLineInclude.include(context, aliasName);
-    },
-
-    getContextMenuItems: function(ev, tr)
+    getContextMenuItems: function(tr)
     {
         var url = tr.querySelector("a.url").href;
-        // xxxFlorent: not so pretty ...
         var aliasName = tr.querySelector(".aliasName").dataset.aliasname;
         var context = Firebug.currentContext;
-
         var items = [
-            {
-                label: "commandline.label.CopyAliasName",
-                id: "fbCopyAliasName",
-                tooltiptext: "commandline.tip.Copy_Alias_Name",
-                command: this.copyToClipboard.bind(this, aliasName)
-            },
             {
                 label: "CopyLocation",
                 id: "fbCopyLocation",
                 tooltiptext: "clipboard.tip.Copy_Location",
-                command: this.copyToClipboard.bind(this, url)
+                command: Obj.bindFixed(System.copyToClipboard, System, url)
             },
             // xxxFlorent: temporarily disabled, see: 
             //    http://code.google.com/p/fbug/issues/detail?id=5878#c27
@@ -263,14 +242,15 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
                 label: Locale.$STRF("commandline.label.IncludeScript", [aliasName]),
                 id: "fbInclude",
                 tooltiptext: "commandline.tip.Include_Script",
-                command: this.include.bind(this, context, aliasName)
+                command: Obj.bindFixed(CommandLineInclude.include, CommandLineInclude,
+                    context, aliasName)
             },
             "-",
             {
                 label: "OpenInTab",
                 id: "fbOpenInTab",
                 tooltiptext: "firebug.tip.Open_In_Tab",
-                command: this.openNewTab.bind(this, url)
+                command: Obj.bindFixed(Win.openNewTab, Win, url)
             }
         ];
 
@@ -287,27 +267,14 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
         return items;
     },
 
-    onContextMenu: function(event)
+    onContextMenu: function(items, object, currentTarget)
     {
-        event.preventDefault();
-        var target = Dom.getAncestorByTagName(event.target, "tr");
+        var target = Dom.getAncestorByTagName(currentTarget, "tr");
 
         if (target === null)
             return;
 
-        // xxxFlorent: FIXME use fbContextMenu...
-        var popup = document.getElementById("fbIncludePopup");
-        Dom.eraseNode(popup);
-
-        var items = this.getContextMenuItems(event, target);
-        for (var i=0; i<items.length; i++)
-            Menu.createMenuItem(popup, items[i]);
-
-        if (popup.firstChild === null)
-            return false;
-
-        popup.openPopupAtScreen(event.screenX, event.screenY, true);
-        return false;
+        Array.prototype.push.apply(items, this.getContextMenuItems(target));
     },
 
     getEditor: function(doc)
@@ -529,6 +496,8 @@ Firebug.registerCommand("include", {
     description: Locale.$STR("console.cmd.help.include"),
     helpUrl: "http://getfirebug.com/wiki/index.php/include"
 });
+
+Firebug.registerUIListener(CommandLineIncludeRep);
 
 return CommandLineIncludeRep;
 
