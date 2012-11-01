@@ -414,6 +414,37 @@ this.synthesizeMouse = function(node, offsetX, offsetY, event, win)
     synthesizeMouse(node, offsetX, offsetY, event, win);
 };
 
+this.getStringDataFromClipboard = function()
+{
+    // https://developer.mozilla.org/en-US/docs/Using_the_Clipboard
+    var clip = Components.classes["@mozilla.org/widget/clipboard;1"].getService(Components.interfaces.nsIClipboard);
+    if (!clip)
+        return false;
+
+    var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);
+    if (!trans)
+        return false;
+    if ('init' in trans)
+        trans.init(null);
+    trans.addDataFlavor("text/unicode");
+
+    clip.getData(trans, clip.kGlobalClipboard);
+
+    var str       = new Object();
+    var strLength = new Object();
+
+    trans.getTransferData("text/unicode", str, strLength);
+
+    if (str)
+    {
+        str = str.value.QueryInterface(Components.interfaces.nsISupportsString);
+        pastetext = str.data.substring(0, strLength.value / 2);
+        return pastetext;
+    }
+
+    return false;
+};
+
 function getFrameOffset(win)
 {
     var top = 0;
@@ -1164,7 +1195,7 @@ function getCommandLine(useCommandEditor)
  */
 this.executeCommand = function(expr, chrome, useCommandEditor)
 {
-    this.clearAndTypeCommand(expr, useCommandEditor);
+    FBTest.clearAndTypeCommand(expr, useCommandEditor);
 
     if (useCommandEditor)
         FBTest.clickToolbarButton(chrome, "fbCmdLineRunButton");

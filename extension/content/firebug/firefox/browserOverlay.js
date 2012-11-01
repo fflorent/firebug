@@ -7,10 +7,15 @@
 
 var {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
-Cu.import("resource://firebug/fbtrace.js");
-Cu.import("resource://firebug/loader.js");
+// Load modules and make sure that none of the importent objects leak into the global scope.
+var fbTraceScope = {};
+Cu.import("resource://firebug/fbtrace.js", fbTraceScope);
+var FBTrace = fbTraceScope.FBTrace;
 
-// Make sure PrefLoader variable doesn't leak into the global scope.
+var loaderScope = {};
+Cu.import("resource://firebug/loader.js", loaderScope);
+var FirebugLoader = loaderScope.FirebugLoader;
+
 var prefLoaderScope = {};
 Cu.import("resource://firebug/prefLoader.js", prefLoaderScope);
 var PrefLoader = prefLoaderScope.PrefLoader;
@@ -314,8 +319,8 @@ Firebug.GlobalUI =
         var container = $("appcontent");
 
         // List of Firebug scripts that must be loaded into the global scope (browser.xul)
+        // FBTrace is no longer loaded into the global space.
         var scriptSources = [
-            "chrome://firebug/content/trace.js",
             "chrome://firebug/content/legacy.js",
             "chrome://firebug/content/moduleConfig.js"
         ]
@@ -645,7 +650,7 @@ Firebug.GlobalUI =
     openFirstRunPage: function()
     {
         var version = Firebug.GlobalUI.getVersion();
-        url = firstRunPage + version;
+        var url = firstRunPage + version;
 
         // Open the firstRunPage in background
         /*gBrowser.selectedTab = */gBrowser.addTab(url, null, null, null);

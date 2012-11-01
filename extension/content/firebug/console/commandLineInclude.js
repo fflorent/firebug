@@ -28,8 +28,8 @@ var ScratchpadManager;
 
 try
 {
-    let sc = {};
-    Cu.import("resource:///modules/devtools/scratchpad-manager.jsm", sc);
+    var scope = {};
+    Cu.import("resource:///modules/devtools/scratchpad-manager.jsm", scope);
     ScratchpadManager = sc.ScratchpadManager;
 }
 catch(ex)
@@ -42,10 +42,17 @@ Cu.import("resource://firebug/storageService.js");
 // ********************************************************************************************* //
 // Implementation
 
-var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugReps.Table,
+var CommandLineIncludeRep = domplate(FirebugReps.Table,
 {
-    tag: FirebugReps.OBJECTBOX( {"oncontextmenu":"$onContextMenu"}, FirebugReps.Table.tag ),
     tableClassName: "tableCommandLineInclude dataTable",
+
+    tag:
+        FirebugReps.OBJECTBOX({"oncontextmenu": "$onContextMenu"},
+            FirebugReps.Table.tag
+        ),
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    // Domplate Handlers
 
     getValueTag: function(object)
     {
@@ -57,10 +64,12 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
 
     getUrlTag: function(href, aliasName, context)
     {
-        return SPAN({style:"height:100%"},
-            A({"href": href, "target": "_blank", "class":"url"},
-                Str.cropString(href, 100)),
-            SPAN({"class": "commands"}
+        var urlTag =
+            SPAN({style:"height:100%"},
+                A({"href": href, "target": "_blank", "class":"url"},
+                    Str.cropString(href, 100)
+                ),
+                SPAN({"class": "commands"}
                 // xxxFlorent: temporarily disabled, see: 
                 //    http://code.google.com/p/fbug/issues/detail?id=5878#c27
                 /*,
@@ -69,8 +78,10 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
                     "class":"closeButton ",
                     onclick: this.deleteAlias.bind(this, aliasName),
                 })*/
-            )
-        );
+                )
+            );
+
+        return urlTag;
     },
 
     displayAliases: function(context)
@@ -79,11 +90,11 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
         var keys = store.getKeys();
         var arrayToDisplay = [];
 
-        for (var i = 0; i < keys.length; i++)
+        for (var i=0; i<keys.length; i++)
         {
             var aliasName = keys[i];
             arrayToDisplay.push({
-                "alias": SPAN({"class":"aliasName"}, aliasName),
+                "alias": SPAN({"class":"aliasName", "data-aliasname": aliasName}, aliasName),
                 "URL": this.getUrlTag(store.getItem(aliasName), aliasName, context)
             });
         }
@@ -107,9 +118,8 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
 
     startEditing: function(target)
     {
-        // xxxFlorent: clumsy ?
         var editor = this.getEditor(target.ownerDocument);
-        Firebug.Editor.startEditing(target, target.textContent, editor);
+        Firebug.Editor.startEditing(target, target.dataset.aliasname, editor);
     },
 
     editAliasName: function(tr)
@@ -129,14 +139,17 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
         var spWin = ScratchpadManager.openScratchpad();
         var scriptContent = null;
         var editor = null;
+
         spWin.onload = function()
         {
             var spInstance = spWin.Scratchpad;
             //intro = spInstance.strings.GetStringFromName("scratchpadIntro");
-            spInstance.addObserver({
+            spInstance.addObserver(
+            {
                 onReady: function()
                 {
                     editor = spInstance.editor;
+
                     // if the content of the script is loaded, we write the content in the editor
                     // otherwise, we write a text that asks the user to wait
                     if (scriptContent)
@@ -153,8 +166,10 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
         xhr.onload = function()
         {
             if (spWin.closed)
-                 return;
+                return;
+
             scriptContent = xhr.responseText;
+
             // if the editor is ready, we put the content on it now
             // otherwise, we wait for the editor
             if (editor)
@@ -165,6 +180,7 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
         {
             if (spWin.closed)
                 return;
+
             spInstance.setText("// error while loading the script", startTextIndex);
         }
 
@@ -192,7 +208,7 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
     {
         var url = tr.querySelector("a.url").href;
         // xxxFlorent: not so pretty ...
-        var aliasName = tr.querySelector(".aliasName").textContent;
+        var aliasName = tr.querySelector(".aliasName").dataset.aliasname;
         var context = Firebug.currentContext;
 
         var items = [
@@ -264,12 +280,9 @@ var CommandLineIncludeRep = FirebugReps.CommandLineInclude = domplate(FirebugRep
         var target = Dom.getAncestorByTagName(event.target, "tr");
 
         if (target === null)
-                return;
-        // xxxFlorent: we should implement a common function that do that work
-        // for example: openMenu(items[, popup]);
-        // this would also be called in console/commandEditor.js:159 and in editor/editor.js:968
+            return;
 
-        // good popup ?
+        // xxxFlorent: FIXME use fbContextMenu...
         var popup = document.getElementById("fbIncludePopup");
         Dom.eraseNode(popup);
 
@@ -309,6 +322,7 @@ var CommandLineInclude =
             store.setItem(newAlias, url);
             this.log("aliasCreated", [newAlias], [context, "info"]);
         }
+
         this.log("includeSuccess", [filename], [context, "info"]);
     },
 
@@ -331,15 +345,6 @@ var CommandLineInclude =
         this.setAliases(aliases);
     },
 
-    animateLoadingMessage: function(row, message, iteration)
-    {
-        if (!row || row.parentNode === null)
-            return;
-        var dots = "...".substr(3-iteration%4);
-        row.querySelector(".objectBox-text").textContent = message + dots;
-        setTimeout(CommandLineInclude.animateLoadingMessage, 500, row, message, iteration+1);
-    },
-
     log: function(localeStr, localeArgs, logArgs)
     {
         var msg = Locale.$STRF("commandline.include."+localeStr, localeArgs);
@@ -347,7 +352,7 @@ var CommandLineInclude =
         return Firebug.Console.logFormatted.apply(Firebug.Console, logArgs);
     },
 
-    // include(context, url[, newAliasi])
+    // include(context, url[, newAlias])
     // includes a remote script
     include: function(context, url, newAlias)
     {
@@ -406,8 +411,8 @@ var CommandLineInclude =
             this.log("aliasRemoved", [newAlias], [context, "info"]);
             return returnValue;
         }
-        var loadingMsgRow = this.log("loading", [], [context, "info", true]);
-        this.animateLoadingMessage(loadingMsgRow, loadingMsgRow.textContent, 0);
+        var loadingMsg = Locale.$STR("Loading");
+        var loadingMsgRow = Firebug.Console.logFormatted([loadingMsg], context, "loading", true);
         var onSuccess = this.onSuccess.bind(this, aliases, newAlias, context, loadingMsgRow);
         var onError = this.onError.bind(this, context, loadingMsgRow);
         this.evaluateRemoteScript(url, context, onSuccess, onError);
@@ -469,6 +474,7 @@ function onCommand(context, args)
 
 // ********************************************************************************************* //
 // Local Helpers
+
 function IncludeEditor(doc)
 {
     Firebug.InlineEditor.call(this, doc);
@@ -480,6 +486,7 @@ IncludeEditor.prototype = domplate(Firebug.InlineEditor.prototype,
     {
         if (cancel)
             return;
+
         var context = Firebug.currentContext;
         if (Css.hasClass(target, "aliasName"))
             this.updateAliasName(target, value, context);
@@ -502,6 +509,7 @@ IncludeEditor.prototype = domplate(Firebug.InlineEditor.prototype,
         var url = store.getItem(oldAliasName);
         store.removeItem(oldAliasName);
         store.setItem(value, url);
+        target.dataset.aliasname = value;
         target.textContent = value;
     }
 });
