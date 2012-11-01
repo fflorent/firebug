@@ -11,9 +11,10 @@ define([
     "firebug/lib/options",
     "firebug/chrome/menu",
     "firebug/lib/system",
+    "firebug/lib/xpcom",
     "firebug/editor/editor",
 ],
-function(FirebugReps, Domplate, Locale, Dom, Win, Css, Str, Options, Menu, System) {
+function(FirebugReps, Domplate, Locale, Dom, Win, Css, Str, Options, Menu, System, Xpcom) {
 with (Domplate) {
 
 // ********************************************************************************************* //
@@ -21,6 +22,8 @@ with (Domplate) {
 
 const Ci = Components.interfaces;
 const Cu = Components.utils;
+const removeConfirmation = "commandline.include.removeConfirmation";
+const prompts = Xpcom.CCSV("@mozilla.org/embedcomp/prompt-service;1", "nsIPromptService");
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -30,7 +33,7 @@ try
 {
     var scope = {};
     Cu.import("resource:///modules/devtools/scratchpad-manager.jsm", scope);
-    ScratchpadManager = sc.ScratchpadManager;
+    ScratchpadManager = scope.ScratchpadManager;
 }
 catch(ex)
 {
@@ -66,7 +69,7 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
     {
         var urlTag =
             SPAN({style:"height:100%"},
-                A({"href": href, "target": "_blank", "class":"url"},
+                A({"href": href, "target": "_blank", "class": "url"},
                     Str.cropString(href, 100)
                 ),
                 SPAN({"class": "commands"}
@@ -105,15 +108,25 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
 
     deleteAlias: function(aliasName, ev)
     {
-        if (window.confirm(Locale.$STRF("commandline.include.confirmDelete", [aliasName])))
+        var store = CommandLine.getStore();
+        if (! Options.get(removeConfirmation))
         {
-            var row = Dom.getAncestorByClass(ev.target, "dataTableRow");
-            if (row)
-                row.parentNode.removeChild(row);
+            var check = {value: false};
+            var flags = prompts.BUTTON_POS_0 * prompts.BUTTON_TITLE_YES +
+            prompts.BUTTON_POS_1 * prompts.BUTTON_TITLE_NO;
 
-            var store = CommandLineInclude.getStore();
-            store.removeItem(aliasName);
+            if  (!prompts.confirmEx(context.chrome.window, Locale.$STR("Firebug"),
+                Locale.$STR("commandline.include.confirmDelete"), flags, "", "", "",
+                Locale.$STR("Do_not_show_this_message_again"), check) == 0)
+            {
+                return;
+            }
+
+            // Update 'Remove Cookies' confirmation option according to the value
+            // of the dialog's "do not show again" checkbox.
+            Options.set(removeConfirmation, !check.value);
         }
+        store.removeItem(aliasName);
     },
 
     startEditing: function(target)
@@ -155,7 +168,7 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
                     if (scriptContent)
                         editor.setText(scriptContent);
                     else
-                        editor.setText("// loading, please wait ...");
+                        editor.setText("// "+Locale.$STR("scratchpad.loading"));
                 }
             });
         }
@@ -181,7 +194,7 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
             if (spWin.closed)
                 return;
 
-            spInstance.setText("// error while loading the script", startTextIndex);
+            spInstance.setText("// "+Locale.$STR("scratchpad.failLoading"));
         }
 
         xhr.send(null);
@@ -337,12 +350,6 @@ var CommandLineInclude =
         if (!this.store)
             this.store = StorageService.getStorage("includeAliases.json");
         return this.store;
-    },
-
-    deleteAlias: function(aliases, aliasToDel)
-    {
-        delete aliases[aliasToDel];
-        this.setAliases(aliases);
     },
 
     log: function(localeStr, localeArgs, logArgs)
