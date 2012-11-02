@@ -41,7 +41,8 @@ catch(ex)
     // Scratchpad does not exists (when using Seamonkey ...)
 }
 
-Cu.import("resource://firebug/storageService.js");
+var storageScope = {};
+Cu.import("resource://firebug/storageService.js", storageScope);
 
 // ********************************************************************************************* //
 // Implementation
@@ -68,7 +69,7 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
             return FirebugReps.Table.getValueTag(object);
     },
 
-    getUrlTag: function(href, aliasName, context)
+    getUrlTag: function(href, aliasName)
     {
         var urlTag =
             SPAN({style:"height:100%"},
@@ -122,9 +123,9 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
             var flags = prompts.BUTTON_POS_0 * prompts.BUTTON_TITLE_YES +
             prompts.BUTTON_POS_1 * prompts.BUTTON_TITLE_NO;
 
-            if  (!prompts.confirmEx(context.chrome.window, Locale.$STR("Firebug"),
+            if  (prompts.confirmEx(context.chrome.window, Locale.$STR("Firebug"),
                 Locale.$STR("commandline.include.confirmDelete"), flags, "", "", "",
-                Locale.$STR("Do_not_show_this_message_again"), check) == 0)
+                Locale.$STR("Do_not_show_this_message_again"), check) > 0)
             {
                 return;
             }
@@ -297,10 +298,10 @@ function CommandLineIncludeObject()
 
 var CommandLineInclude =
 {
-    onSuccess: function(aliases, newAlias, context, loadingMsgRow, xhr)
+    onSuccess: function(newAlias, context, loadingMsgRow, xhr)
     {
         var urlComponent = xhr.channel.URI.QueryInterface(Ci.nsIURL);
-        var msg, filename = urlComponent.fileName, url = urlComponent.spec;
+        var filename = urlComponent.fileName, url = urlComponent.spec;
         // clear the message saying "loading..."
         loadingMsgRow.parentNode.removeChild(loadingMsgRow);
 
@@ -323,13 +324,15 @@ var CommandLineInclude =
     getStore: function()
     {
         if (!this.store)
-            this.store = StorageService.getStorage("includeAliases.json");
+            this.store = storageScope.StorageService.getStorage("includeAliases.json");
         return this.store;
     },
 
-    log: function(localeStr, localeArgs, logArgs)
+    log: function(localeStr, localeArgs, logArgs, noAutoPrefix)
     {
-        var msg = Locale.$STRF("commandline.include."+localeStr, localeArgs);
+        var prefixedLocaleStr = (noAutoPrefix ? localeStr : "commandline.include."+localeStr);
+
+        var msg = Locale.$STRF(prefixedLocaleStr, localeArgs);
         logArgs.unshift([msg]);
         return Firebug.Console.logFormatted.apply(Firebug.Console, logArgs);
     },
@@ -340,16 +343,13 @@ var CommandLineInclude =
     {
         var reNotAlias = /[\.\/]/;
         var urlIsAlias = url !== null && !reNotAlias.test(url);
-        var aliases;
         var returnValue = Firebug.Console.getDefaultReturnValue(context.window);
-        var acceptedSchemes = ["http", "https"];
-        var msg;
 
         // checking arguments:
-        if (newAlias !== undefined && typeof newAlias !== "string")
+        if ((newAlias !== undefined && typeof newAlias !== "string") || newAlias === "")
             throw "wrong alias argument; expected string";
 
-        if (url !== null && typeof url !== "string")
+        if (url !== null && typeof url !== "string" || !url && !newAlias)
             throw "wrong url argument; expected string or null";
 
         if (newAlias !== undefined)
@@ -393,16 +393,17 @@ var CommandLineInclude =
             this.log("aliasRemoved", [newAlias], [context, "info"]);
             return returnValue;
         }
-        var loadingMsg = Locale.$STR("Loading");
-        var loadingMsgRow = Firebug.Console.logFormatted([loadingMsg], context, "loading", true);
-        var onSuccess = this.onSuccess.bind(this, aliases, newAlias, context, loadingMsgRow);
+        var loadingMsgRow = this.log("Loading", [], [context, "loading", true], true);
+        //var loadingMsg = Locale.$STR("Loading");
+        //var loadingMsgRow = Firebug.Console.logFormatted([loadingMsg], context, "loading", true);
+        var onSuccess = this.onSuccess.bind(this, newAlias, context, loadingMsgRow);
         var onError = this.onError.bind(this, context, loadingMsgRow);
-        this.evaluateRemoteScript(url, context, onSuccess, onError);
+        this.evaluateRemoteScript(url, context, onSuccess, onError, loadingMsgRow);
 
         return returnValue;
     },
 
-    evaluateRemoteScript: function(url, context, successFunction, errorFunction)
+    evaluateRemoteScript: function(url, context, successFunction, errorFunction, loadingMsgRow)
     {
         var xhr = new XMLHttpRequest({ mozAnon: true, timeout:30});
         var acceptedSchemes = ["http", "https"];
@@ -410,9 +411,7 @@ var CommandLineInclude =
 
         xhr.onload = function()
         {
-            var contentType = xhr.getResponseHeader("Content-Type").split(";")[0];
             var codeToEval = xhr.responseText;
-            var headerMatch;
             Firebug.CommandLine.evaluateInWebPage(codeToEval, context);
             if (successFunction)
                 successFunction(xhr);
@@ -431,6 +430,7 @@ var CommandLineInclude =
         if (!~acceptedSchemes.indexOf(xhr.channel.URI.scheme))
         {
             this.log("invalidRequestProtocol", [], [context, "error"]);
+            loadingMsgRow.parentNode.removeChild(loadingMsgRow);
             return ;
         }
 
