@@ -55,6 +55,8 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
             FirebugReps.Table.tag
         ),
 
+    inspectable: false,
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     // Domplate Handlers
 
