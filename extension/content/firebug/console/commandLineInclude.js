@@ -51,7 +51,7 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
     tableClassName: "tableCommandLineInclude dataTable",
 
     tag:
-        FirebugReps.OBJECTBOX({},
+        FirebugReps.OBJECTBOX({_repObject: "$object"},
             FirebugReps.Table.tag
         ),
 
@@ -103,7 +103,8 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
             });
         }
 
-        this.log(arrayToDisplay, ["alias", "URL"], context);
+        var input = new CommandLineIncludeObject();
+        this.log(arrayToDisplay, ["alias", "URL"], context, input);
         return Firebug.Console.getDefaultReturnValue(context.window);
     },
 
@@ -204,8 +205,17 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
         xhr.send(null);
     },
 
-    getContextMenuItems: function(tr)
+    supportsObject: function(object, type)
     {
+        return object instanceof CommandLineIncludeObject;
+    },
+
+    getContextMenuItems: function(object, target, context)
+    {
+        var tr = Dom.getAncestorByTagName(target, "tr");
+        if (!tr)
+            return [];
+
         var url = tr.querySelector("a.url").href;
         var aliasName = tr.querySelector(".aliasName").dataset.aliasname;
         var context = Firebug.currentContext;
@@ -267,16 +277,6 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
         return items;
     },
 
-    onContextMenu: function(items, object, currentTarget)
-    {
-        var target = Dom.getAncestorByTagName(currentTarget, "tr");
-
-        if (target === null)
-            return;
-
-        Array.prototype.push.apply(items, this.getContextMenuItems(target));
-    },
-
     getEditor: function(doc)
     {
         if (!this.editor)
@@ -284,6 +284,12 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
         return this.editor;
     }
 });
+
+// ********************************************************************************************* //
+
+function CommandLineIncludeObject()
+{
+}
 
 // ********************************************************************************************* //
 
@@ -497,7 +503,7 @@ Firebug.registerCommand("include", {
     helpUrl: "http://getfirebug.com/wiki/index.php/include"
 });
 
-Firebug.registerUIListener(CommandLineIncludeRep);
+Firebug.registerRep(CommandLineIncludeRep);
 
 return CommandLineIncludeRep;
 
