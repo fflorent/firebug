@@ -88,7 +88,7 @@ function checkTableContent(callback, expectedAliasName, checkFunction)
         {
             var row = FW.FBL.getAncestorByTagName(aliasNameCell, "tr");
             var aliasValueCell = row.querySelector(".url");
-            checkFunction(table, row, aliasNameCell.textContent, aliasValueCell.textContent);
+            checkFunction(table, row, aliasNameCell.dataset.aliasname, aliasValueCell.href);
         }
         callback();
     });
