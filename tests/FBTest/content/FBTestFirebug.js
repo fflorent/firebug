@@ -1481,7 +1481,9 @@ this.waitForBreakInDebugger = function(chrome, lineNo, breakpoint, callback)
         var panel = chrome.getSelectedPanel();
         if (panel)
         {
-            onPanelReady(sourceRow);
+            setTimeout(function() {
+                onPanelReady(sourceRow);
+            }, 200);
             return;
         }
 
@@ -2341,10 +2343,11 @@ this.executeContextMenuCommand = function(target, menuItemIdentifier, callback)
             {
                 // Since the command is dispatched asynchronously,
                 // execute the callback using timeout.
+                // Especially Mac OS needs this.
                 setTimeout(function()
                 {
                     callback();
-                }, 10);
+                }, 250);
             }
         }, 10);
     }
@@ -2784,6 +2787,16 @@ this.isInspectorActive = function()
 {
     return FW.Firebug.Inspector.inspecting;
 };
+
+// ********************************************************************************************* //
+// OS
+
+this.isMac = function()
+{
+    var hiddenWindow = Cc["@mozilla.org/appshell/appShellService;1"]
+        .getService(Ci.nsIAppShellService).hiddenDOMWindow;
+    return (hiddenWindow.navigator.platform.indexOf("Mac") >= 0);
+}
 
 // ********************************************************************************************* //
 }).apply(FBTest);

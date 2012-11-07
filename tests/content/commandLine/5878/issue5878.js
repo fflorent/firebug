@@ -24,8 +24,7 @@ function runTest()
                 {
                     contextMenuTarget = row;
                     FBTest.compare(expectedMyScriptURL, url,
-                        "The alias should redirect to " + expectedMyScriptURL +
-                        ", not to: " + url);
+                        "The alias should redirect to " + expectedMyScriptURL);
                 }
             });
             // test context menu: 
@@ -43,7 +42,7 @@ function runTest()
                 FBTest.executeContextMenuCommand(contextMenuTarget, "fbCopyLocation", function()
                 {
                     FBTest.compare(FBTest.getClipboardText(), expectedMyScriptURL,
-                        "The copied location should be: "+expectedMyScriptURL);
+                        "The copied location should be: " + expectedMyScriptURL);
                     callback();
                 });
             });

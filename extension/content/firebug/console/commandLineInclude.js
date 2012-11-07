@@ -432,7 +432,8 @@ var CommandLineInclude =
             xhr.ontimeout = xhr.onerror = errorFunction;
         }
 
-        try{
+        try
+        {
             xhr.open("GET", absoluteURL, true);
         }
         catch(ex)
