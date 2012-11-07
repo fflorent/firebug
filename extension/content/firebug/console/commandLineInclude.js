@@ -312,7 +312,7 @@ var CommandLineInclude =
             this.log("aliasCreated", [newAlias], [context, "info"]);
         }
 
-        this.log("includeSuccess", [filename], [context, "info"]);
+        this.log("includeSuccess", [filename], [context, "info"], true);
     },
 
     onError: function(context, url, loadingMsgRow)
