@@ -418,6 +418,7 @@ var CommandLineInclude =
         var xhr = new XMLHttpRequest({ mozAnon: true, timeout:30});
         var acceptedSchemes = ["http", "https"];
         var absoluteURL = context.browser.currentURI.resolve(url);
+        var returnValue = Firebug.Console.getDefaultReturnValue(context.window);
 
         xhr.onload = function()
         {
@@ -446,7 +447,7 @@ var CommandLineInclude =
         {
             this.log("invalidRequestProtocol", [], [context, "error"]);
             this.clearLoadingMessage(loadingMsgRow);
-            return ;
+            return returnValue;
         }
 
         xhr.send(null);
