@@ -440,6 +440,11 @@ var CommandLineInclude =
         catch(ex)
         {
             this.clearLoadingMessage(loadingMsgRow);
+            if (ex.name === "NS_ERROR_UNKNOWN_PROTOCOL")
+            {
+                this.log("invalidRequestProtocol", [], [context, "error"]);
+                return returnValue;
+            }
             throw ex;
         }
 
