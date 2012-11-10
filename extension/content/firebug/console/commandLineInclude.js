@@ -100,7 +100,8 @@ var CommandLineIncludeRep = domplate(FirebugReps.Table,
 
         if (keys.length === 0)
         {
-            CommandLineInclude.log("noAliasDefined", [], [context, "error"]);
+            var msg = Locale.$STR("commandline.include.noDefinedAlias");
+            Firebug.Console.log(msg, context, null, FirebugReps.Hint);
             return returnValue;
         }
 
