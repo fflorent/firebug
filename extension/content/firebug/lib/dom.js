@@ -778,7 +778,6 @@ Dom.getMappedData = function(element, key, defaultValue)
 
 Dom.setMappedData = function(element, key, value)
 {
-    try{
     if (!Dom.isNode(element))
         throw new TypeError("expected an element as the first argument");
 
@@ -787,7 +786,6 @@ Dom.setMappedData = function(element, key, value)
 
     var elementMap = getElementMap(element);
     elementMap[key] = value;
-    } catch(ex){ alert(ex); }
 }
 
 Dom.deleteMappedData = function(element, key)
