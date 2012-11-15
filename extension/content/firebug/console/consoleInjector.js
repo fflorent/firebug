@@ -109,7 +109,7 @@ Firebug.Console.injector =
         var handler = createConsoleHandler(context, win);
 
         // Initialize Firebug token
-        win.document.setUserData("firebug-Token", handler.token, null);
+        Dom.setMappedData(win.document, "firebug-Token", handler.token);
 
         this.setConsoleHandler(context, win, handler);
 
@@ -128,7 +128,7 @@ Firebug.Console.injector =
             return null;
         }
 
-        var attachedToken = win.document.getUserData("firebug-Token");
+        var attachedToken = Dom.getMappedData(win.document, "firebug-Token");
         if (context.activeConsoleHandlers)
         {
             for(var i = 0; i < context.activeConsoleHandlers.length; i++)
@@ -218,14 +218,14 @@ function createConsoleHandler(context, win)
     {
         if (FBTrace.DBG_CONSOLE)
             FBTrace.sysout("FirebugConsoleHandler(" + this.handler_name + ") " +
-                win.document.getUserData("firebug-methodName") + ", event", event);
+                Dom.getMappedData(win.document, "firebug-methodName") + ", event", event);
 
         if (!Firebug.CommandLine.CommandHandler.handle(event, this.console, win))
         {
             if (FBTrace.DBG_CONSOLE)
                 FBTrace.sysout("FirebugConsoleHandler", this);
 
-            var methodName = win.document.getUserData("firebug-methodName");
+            var methodName = Dom.getMappedData(win.document, "firebug-methodName");
             Firebug.Console.log(Locale.$STRF("console.MethodNotSupported", [methodName]));
         }
     };
