@@ -3,8 +3,9 @@
 define([
     "firebug/lib/wrapper",
     "firebug/lib/events",
+    "firebug/lib/dom",
 ],
-function(Wrapper, Events) {
+function(Wrapper, Events, Dom) {
 
 // ********************************************************************************************* //
 // Command Line APIs

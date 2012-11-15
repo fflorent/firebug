@@ -312,6 +312,8 @@ Dom.hasChildElements = function(node)
     return false;
 };
 
+Firebug.Dom = Dom;
+
 // ********************************************************************************************* //
 
 Dom.getNextByClass = function(root, state)
@@ -776,7 +778,8 @@ Dom.getMappedData = function(element, key, defaultValue)
 
 Dom.setMappedData = function(element, key, value)
 {
-    if (! (element instanceof Element))
+    try{
+    if (!Dom.isNode(element))
         throw new TypeError("expected an element as the first argument");
 
     if (typeof key !== "string")
@@ -784,6 +787,7 @@ Dom.setMappedData = function(element, key, value)
 
     var elementMap = getElementMap(element);
     elementMap[key] = value;
+    } catch(ex){ alert(ex); }
 }
 
 Dom.deleteMappedData = function(element, key)

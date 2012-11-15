@@ -11,10 +11,11 @@ define([
     "firebug/chrome/window",
     "firebug/console/console",
     "firebug/lib/array",
+    "firebug/lib/dom",
     "firebug/console/consoleExposed",
     "firebug/console/errors",
 ],
-function(Obj, Firebug, FirebugReps, Locale, Events, Url, StackFrame, Win, Console, Arr) {
+function(Obj, Firebug, FirebugReps, Locale, Events, Url, StackFrame, Win, Console, Arr, Dom) {
 
 // ********************************************************************************************* //
 // Constants
