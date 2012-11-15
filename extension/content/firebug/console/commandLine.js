@@ -964,6 +964,7 @@ Firebug.CommandLine.CommandHandler = Obj.extend(Object,
                 ": method " + methodName + " userObjects:",  userObjects);
 
         var subHandler = api[methodName];
+        alert(Object.keys(api));
         if (!subHandler)
             return false;
 
