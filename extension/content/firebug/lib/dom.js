@@ -6,8 +6,9 @@ define([
     "firebug/lib/css",
     "firebug/lib/array",
     "firebug/lib/xml",
+    "firebug/lib/wrapper",
 ],
-function(FBTrace, Deprecated, Css, Arr, Xml) {
+function(FBTrace, Deprecated, Css, Arr, Xml, Wrapper) {
 
 // ********************************************************************************************* //
 // Constants
@@ -758,7 +759,7 @@ Dom.scrollMenupopup = function(popup, item)
 function getElementMap(element)
 {
     var elementMap;
-
+    element = Wrapper.unwrapObject(element);
     if (!domWeakMap.has(element))
     {
         elementMap = {};
