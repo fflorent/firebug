@@ -6,8 +6,9 @@ define([
     "firebug/lib/css",
     "firebug/lib/array",
     "firebug/lib/xml",
+    "firebug/lib/wrapper",
 ],
-function(FBTrace, Deprecated, Css, Arr, Xml) {
+function(FBTrace, Deprecated, Css, Arr, Xml, Wrapper) {
 
 // ********************************************************************************************* //
 // Constants
@@ -18,6 +19,7 @@ var Cc = Components.classes;
 var Dom = {};
 var domMemberCache = null;
 var domMemberMap = {};
+var domWeakMap = new WeakMap();
 
 Dom.domUtils = Cc["@mozilla.org/inspector/dom-utils;1"].getService(Ci.inIDOMUtils);
 
@@ -310,6 +312,8 @@ Dom.hasChildElements = function(node)
 
     return false;
 };
+
+Firebug.Dom = Dom;
 
 // ********************************************************************************************* //
 
@@ -747,6 +751,48 @@ Dom.scrollMenupopup = function(popup, item)
             scrollBox.scrollTop -= popupRect.bottom - itemRect.bottom - itemRect.height;
         }
     }
+}
+
+// ********************************************************************************************* //
+// MappedData
+
+function getElementMap(element)
+{
+    var elementMap;
+    element = Wrapper.unwrapObject(element);
+    if (!domWeakMap.has(element))
+    {
+        elementMap = {};
+        domWeakMap.set(element, elementMap);
+    }
+    else
+        elementMap = domWeakMap.get(element);
+
+    return elementMap;
+}
+
+Dom.getMappedData = function(element, key, defaultValue)
+{
+    var elementMap = getElementMap(element);
+    return elementMap[key] || defaultValue;
+}
+
+Dom.setMappedData = function(element, key, value)
+{
+    if (!Dom.isNode(element))
+        throw new TypeError("expected an element as the first argument");
+
+    if (typeof key !== "string")
+        throw new TypeError("the key argument must be a string");
+
+    var elementMap = getElementMap(element);
+    elementMap[key] = value;
+}
+
+Dom.deleteMappedData = function(element, key)
+{
+    var elementMap = getElementMap(element);
+    delete elementMap[key];
 }
 
 // ********************************************************************************************* //
