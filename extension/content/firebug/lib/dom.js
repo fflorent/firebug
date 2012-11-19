@@ -19,7 +19,7 @@ var Cc = Components.classes;
 var Dom = {};
 var domMemberCache = null;
 var domMemberMap = {};
-var domWeakMap = new WeakMap();
+var domMappedData = new WeakMap();
 
 Dom.domUtils = Cc["@mozilla.org/inspector/dom-utils;1"].getService(Ci.inIDOMUtils);
 
@@ -312,8 +312,6 @@ Dom.hasChildElements = function(node)
 
     return false;
 };
-
-Firebug.Dom = Dom;
 
 // ********************************************************************************************* //
 
@@ -759,22 +757,25 @@ Dom.scrollMenupopup = function(popup, item)
 function getElementMap(element)
 {
     var elementMap;
-    element = Wrapper.unwrapObject(element);
-    if (!domWeakMap.has(element))
+
+    // force element to be wrapped:
+    element = new XPCNativeWrapper(element);
+
+    if (!domMappedData.has(element))
     {
         elementMap = {};
-        domWeakMap.set(element, elementMap);
+        domMappedData.set(element, elementMap);
     }
     else
-        elementMap = domWeakMap.get(element);
+        elementMap = domMappedData.get(element);
 
     return elementMap;
 }
 
-Dom.getMappedData = function(element, key, defaultValue)
+Dom.getMappedData = function(element, key)
 {
     var elementMap = getElementMap(element);
-    return elementMap[key] || defaultValue;
+    return elementMap[key];
 }
 
 Dom.setMappedData = function(element, key, value)
