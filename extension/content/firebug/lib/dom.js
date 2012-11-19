@@ -313,8 +313,6 @@ Dom.hasChildElements = function(node)
     return false;
 };
 
-Firebug.Dom = Dom;
-
 // ********************************************************************************************* //
 
 Dom.getNextByClass = function(root, state)
@@ -756,28 +754,28 @@ Dom.scrollMenupopup = function(popup, item)
 // ********************************************************************************************* //
 // MappedData
 
-function getElementMap(element)
+function getElementData(element)
 {
-    var elementMap;
+    var elementData;
 
     // force element to be wrapped:
     element = new XPCNativeWrapper(element);
 
     if (!domMappedData.has(element))
     {
-        elementMap = {};
-        domMappedData.set(element, elementMap);
+        elementData = {};
+        domMappedData.set(element, elementData);
     }
     else
-        elementMap = domMappedData.get(element);
+        elementData = domMappedData.get(element);
 
-    return elementMap;
+    return elementData;
 }
 
 Dom.getMappedData = function(element, key)
 {
-    var elementMap = getElementMap(element);
-    return elementMap[key];
+    var elementData = getElementData(element);
+    return elementData[key];
 }
 
 Dom.setMappedData = function(element, key, value)
@@ -788,14 +786,14 @@ Dom.setMappedData = function(element, key, value)
     if (typeof key !== "string")
         throw new TypeError("the key argument must be a string");
 
-    var elementMap = getElementMap(element);
-    elementMap[key] = value;
+    var elementData = getElementData(element);
+    elementData[key] = value;
 }
 
 Dom.deleteMappedData = function(element, key)
 {
-    var elementMap = getElementMap(element);
-    delete elementMap[key];
+    var elementData = getElementData(element);
+    delete elementData[key];
 }
 
 // ********************************************************************************************* //
