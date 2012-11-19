@@ -1,12 +1,11 @@
 /* See license.txt for terms of usage */
 
 define([
-    "firebug/firebug",
     "firebug/lib/wrapper",
     "firebug/lib/events",
     "firebug/lib/dom",
 ],
-function(Firebug, Wrapper, Events, Dom) {
+function(Wrapper, Events, Dom) {
 
 // ********************************************************************************************* //
 // Command Line APIs

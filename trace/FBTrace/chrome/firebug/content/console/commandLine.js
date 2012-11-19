@@ -351,7 +351,8 @@ Firebug.CommandLine = Obj.extend(Firebug.Module,
 
     evaluateInWebPage: function(expr, context, targetWindow)
     {
-        var win = targetWindow || context.window;
+        var win = targetWindow ? targetWindow :
+            (context.baseWindow ? context.baseWindow : context.window);
         var element = Dom.addScript(win.document, "_firebugInWebPage", expr);
         if (!element)
             return;
@@ -564,7 +565,8 @@ Firebug.CommandLine = Obj.extend(Firebug.Module,
         var commandLine = this.getSingleRowCommandLine();
         var commandEditor = this.getCommandEditor();
 
-        if (saveMultiLine)  // we are just closing the view
+        // we are just closing the view
+        if (saveMultiLine)
         {
             commandLine.value = commandEditor.value;
             return;

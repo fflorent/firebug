@@ -313,6 +313,8 @@ Dom.hasChildElements = function(node)
     return false;
 };
 
+Firebug.Dom = Dom;
+
 // ********************************************************************************************* //
 
 Dom.getNextByClass = function(root, state)
