@@ -93,7 +93,7 @@ Obj.hasProperties = function(ob, nonEnumProps, ownPropsOnly)
         var type = typeof(ob);
         if (type == "string" && ob.length)
             return true;
-         
+
         if (type === "number" || type === "boolean" || type === "undefined" || ob === null)
             return false;
 
@@ -137,6 +137,24 @@ Obj.hasProperties = function(ob, nonEnumProps, ownPropsOnly)
 
     return false;
 };
+
+Obj.defineWeakProperty = function(obj, prop, value)
+{
+    var weakRef = Components.utils.getWeakReference(value);
+    Object.defineProperty(obj, prop,
+    {
+        get: function()
+        {
+            return weakRef.get();
+        },
+        set: function(value)
+        {
+            throw "This object has been defined using Obj.defineWeakProperty. "+
+                "To override it, use that method";
+        },
+        configurable: true
+    });
+}
 
 Obj.getPrototype = function(ob)
 {
