@@ -2283,6 +2283,12 @@ this.getSelectedNodeBox = function()
     return panel.panelNode.querySelector(".nodeBox.selected");
 }
 
+this.getSelectedNode = function()
+{
+    var panel = FBTest.getPanel("html");
+    return panel.selection;
+}
+
 // ********************************************************************************************* //
 // Context menu
 
@@ -2691,8 +2697,7 @@ function createCanvas(width, height)
 // Inspector
 this.inspectElement = function(elt)
 {
-    FBTest.clickToolbarButton(FW.Firebug.chrome, "fbInspectButton");
-    FBTest.click(elt);
+    FW.Firebug.Inspector.highlightObject(elt, FW.Firebug.currentContext);
 };
 
 this.inspectUsingFrame = function(elt)

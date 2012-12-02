@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Issue 6013: after iframe reload, "shade box model" lost</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+        <link href="../../_common/testcase.css" type="text/css" rel="stylesheet"/>
+    </head>
+    <body>
+        <header>
+            <h1><a href="http://code.google.com/p/fbug/issues/detail?id=6013">Issue 6013</a>: Issue summary</h1>
+        </header>
+        <div>
+            <section id="content">
+                <iframe src="./iframe.html" style="width:500px"></iframe>
+            </section>
+            <section id="description">
+                <h3>Steps to reproduce</h3>
+                <ol>
+                    <li>Open Firebug</li>
+                    <li>Ensure box model shading is on.</li>
+                    <li>Right-click any of the white "test" text and <em>Inspect Element with Firebug</em></li>
+                    <li>The <em>HTML</em> panel should open and box model shading should be active on the document.</li>
+                    <li>Right-click in the <u>dark blue</u> area and choose <em>This Frame</em> &gt; <em>Reload Frame</em></li>
+                    <li>Hover in the <em>HTML</em> panel and the box model shading is no longer active</li>
+                </ol>
+                <h3>Expected result</h3>
+                <ul>
+                    <li>The box model shading should still be active. </li>
+                </ul>
+            </section>
+            <footer>
+                Florent FAYOLLE, florent.fayolle69@gmail.com
+            </footer>
+        </div>
+    </body>
+</html>
