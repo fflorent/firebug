@@ -194,8 +194,7 @@ Firebug.CommandLine = Obj.extend(Firebug.Module,
         {
             consoleHandler.setEvaluatedCallback( function useConsoleFunction(result)
             {
-                var ignoreReturnValue = Console.getDefaultReturnValue(win);
-                if (result === ignoreReturnValue)
+                if (Console.isDefaultReturnValue(result, win))
                     return;
 
                 successConsoleFunction(result, context);
@@ -317,8 +316,7 @@ Firebug.CommandLine = Obj.extend(Firebug.Module,
         {
             consoleHandler.setEvaluatedCallback( function useConsoleFunction(result)
             {
-                var ignoreReturnValue = Console.getDefaultReturnValue(win);
-                if (result === ignoreReturnValue)
+                if (CommandLine.isDefaultReturnValue(result, win))
                     return;
 
                 successConsoleFunction(result, context);

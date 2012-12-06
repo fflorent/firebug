@@ -448,7 +448,7 @@ Firebug.Console = Obj.extend(ActivableConsole,
 
     getDefaultReturnValue: function(win)
     {
-        var defaultValue = "_firebugIgnore";
+        var defaultValue = new this.DefaultReturnValue();
         var console = win.wrappedJSObject.console;
         if (!console)
             return defaultValue;
@@ -461,8 +461,35 @@ Firebug.Console = Obj.extend(ActivableConsole,
             return returnValue;
 
         return defaultValue;
+    },
+
+    isDefaultReturnValue: function(value, win)
+    {
+        if (value === "_firebugIgnore")
+        {
+            if (FBTrace.DBG_CONSOLE)
+            {
+                FBTrace.sysout("WARNING: Firebug.Console.isDefaultReturnValue; \"_firebugIgnore\" "+
+                    "is deprecated. Please, use Firebug.Console.getDefaultReturnValue(win) "+
+                    "instead");
+            }
+
+            return true;
+        }
+        return value instanceof Firebug.Console.DefaultReturnValue;
     }
 });
+
+// ********************************************************************************************* //
+
+/**
+ * Class whose instance is returned when having nothing to display in the Console
+ */
+Firebug.Console.DefaultReturnValue = function()
+{
+    // no operation
+};
+
 
 // ********************************************************************************************* //
 
