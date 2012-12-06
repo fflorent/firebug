@@ -306,7 +306,7 @@ function CommandLineIncludeObject()
 
 var CommandLineInclude =
 {
-    onSuccess: function(newAlias, context, loadingMsgRow, xhr)
+    onSuccess: function(newAlias, context, loadingMsgRow, userListeners, xhr)
     {
         var urlComponent = xhr.channel.URI.QueryInterface(Ci.nsIURL);
         var filename = urlComponent.fileName, url = urlComponent.spec;
@@ -321,12 +321,17 @@ var CommandLineInclude =
         }
 
         this.log("includeSuccess", [filename], [context, "info", true]);
+
+        if (userListeners && typeof userListeners.onSuccess === "function")
+            userListeners.onSuccess(url);
     },
 
-    onError: function(context, url, loadingMsgRow)
+    onError: function(context, url, loadingMsgRow, userListeners)
     {
         this.clearLoadingMessage(loadingMsgRow);
         this.log("loadFail", [url], [context, "error"]);
+        if (userListeners && typeof userListeners.onError === "function")
+            userListeners.onError(url);
     },
 
     clearLoadingMessage: function(loadingMsgRow)
@@ -357,7 +362,7 @@ var CommandLineInclude =
     {
         var reNotAlias = /[\.\/]/;
         var urlIsAlias = url !== null && !reNotAlias.test(url);
-        var returnValue = Firebug.Console.getDefaultReturnValue(context.window);
+        var returnValue = new IncludeDefaultReturnValue();
 
         // checking arguments:
         if ((newAlias !== undefined && typeof newAlias !== "string") || newAlias === "")
@@ -414,8 +419,9 @@ var CommandLineInclude =
             return returnValue;
         }
         var loadingMsgRow = this.log("Loading", [], [context, "loading", true], true);
-        var onSuccess = this.onSuccess.bind(this, newAlias, context, loadingMsgRow);
-        var onError = Obj.bindFixed(this.onError, this, context, url, loadingMsgRow);
+        var userListeners = returnValue.listeners;
+        var onSuccess = this.onSuccess.bind(this, newAlias, context, loadingMsgRow, userListeners);
+        var onError = Obj.bindFixed(this.onError, this, context, url, loadingMsgRow, userListeners);
         this.evaluateRemoteScript(url, context, onSuccess, onError, loadingMsgRow);
 
         return returnValue;
@@ -485,6 +491,33 @@ function onCommand(context, args)
 
 // ********************************************************************************************* //
 // Local Helpers
+
+// class whose instance is silently returned to the console
+function IncludeDefaultReturnValue()
+{
+    this.listeners = {};
+    this.done = function(listeners)
+    {
+        if (typeof listeners === "function")
+            this.listeners["onSuccess"] = listeners;
+        else if (Object.prototype.toString.call(listeners) === "[object Object]")
+        {
+            // xxxFlorent: is there a more elegant way to copy properties?
+            for (var i in listeners)
+            {
+                if (listeners.hasOwnProperty(i))
+                    this.listeners[i] = listeners[i];
+            }
+        }
+        return this;
+    };
+    this.__exposedProps__ = {
+        done: "r"
+    };
+};
+
+// inheritance:
+IncludeDefaultReturnValue.prototype = new Firebug.Console.DefaultReturnValue();
 
 function IncludeEditor(doc)
 {
