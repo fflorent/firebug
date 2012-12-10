@@ -448,19 +448,20 @@ Firebug.Console = Obj.extend(ActivableConsole,
 
     getDefaultReturnValue: function(win)
     {
-        var defaultValue = new this.DefaultReturnValue();
+        if (!this.defaultReturnValue)
+            this.defaultReturnValue = new this.DefaultReturnValue();
         var console = win.wrappedJSObject.console;
         if (!console)
-            return defaultValue;
+            return this.defaultReturnValue;
 
         if (Obj.isNonNativeGetter(console, "__returnValue__"))
-            return defaultValue;
+            return this.defaultReturnValue;
 
         var returnValue = console.__returnValue__;
         if (returnValue)
             return returnValue;
 
-        return defaultValue;
+        return this.DefaultReturnValue;
     },
 
     isDefaultReturnValue: function(value, win)
@@ -476,18 +477,33 @@ Firebug.Console = Obj.extend(ActivableConsole,
 
             return true;
         }
-        return value instanceof Firebug.Console.DefaultReturnValue;
+        var defaultValue = this.getDefaultReturnValue();
+
+        // check if the value is the default one or inherits from DefaultReturnValue:
+        return value === defaultValue || value instanceof Firebug.Console.DefaultReturnValue;
     }
 });
 
 // ********************************************************************************************* //
 
 /**
- * Class whose instance is returned when having nothing to display in the Console
+ * Class whose instance is returned when having nothing to display in the Console.
+ *
+ * Note that derived classes also behave the same.
  */
 Firebug.Console.DefaultReturnValue = function()
 {
     // no operation
+};
+Firebug.Console.DefaultReturnValue.prototype = {
+    toString: function()
+    {
+        // returns undefined if the instance is stringified accidentally
+        return undefined;
+    },
+    __exposedProps__: {
+        toString: "r",
+    },
 };
 
 

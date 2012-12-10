@@ -28,6 +28,8 @@ const prompts = Xpcom.CCSV("@mozilla.org/embedcomp/prompt-service;1", "nsIPrompt
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+// Scratchpad Manager:
+
 var ScratchpadManager;
 
 try
@@ -41,8 +43,20 @@ catch(ex)
     // Scratchpad does not exists (when using Seamonkey ...)
 }
 
+
+// Storage Service:
+
 var storageScope = {};
 Cu.import("resource://firebug/storageService.js", storageScope);
+
+
+// Promise:
+
+var promiseScope = {};
+Cu.import("resource://gre/modules/devtools/_Promise.jsm", promiseScope);
+var Promise = promiseScope.Promise;
+
+
 
 // ********************************************************************************************* //
 // Implementation
@@ -306,7 +320,7 @@ function CommandLineIncludeObject()
 
 var CommandLineInclude =
 {
-    onSuccess: function(newAlias, context, loadingMsgRow, userListeners, xhr)
+    onSuccess: function(newAlias, context, loadingMsgRow, promise, xhr)
     {
         var urlComponent = xhr.channel.URI.QueryInterface(Ci.nsIURL);
         var filename = urlComponent.fileName, url = urlComponent.spec;
@@ -322,16 +336,16 @@ var CommandLineInclude =
 
         this.log("includeSuccess", [filename], [context, "info", true]);
 
-        if (userListeners && typeof userListeners.onSuccess === "function")
-            userListeners.onSuccess(url);
+        if (promise)
+            promise.resolve(url);
     },
 
-    onError: function(context, url, loadingMsgRow, userListeners)
+    onError: function(context, url, loadingMsgRow, promise)
     {
         this.clearLoadingMessage(loadingMsgRow);
         this.log("loadFail", [url], [context, "error"]);
-        if (userListeners && typeof userListeners.onError === "function")
-            userListeners.onError(url);
+        if (promise)
+            promise.reject(url);
     },
 
     clearLoadingMessage: function(loadingMsgRow)
@@ -419,9 +433,11 @@ var CommandLineInclude =
             return returnValue;
         }
         var loadingMsgRow = this.log("Loading", [], [context, "loading", true], true);
-        var userListeners = returnValue.listeners;
-        var onSuccess = this.onSuccess.bind(this, newAlias, context, loadingMsgRow, userListeners);
-        var onError = Obj.bindFixed(this.onError, this, context, url, loadingMsgRow, userListeners);
+
+        // Note that returnValue derives from Promise:
+        var onSuccess = this.onSuccess.bind(this, newAlias, context, loadingMsgRow, returnValue);
+        var onError = Obj.bindFixed(this.onError, this, context, url, loadingMsgRow, returnValue);
+
         this.evaluateRemoteScript(url, context, onSuccess, onError, loadingMsgRow);
 
         return returnValue;
@@ -471,8 +487,6 @@ var CommandLineInclude =
         }
 
         xhr.send(null);
-
-        // xxxFlorent: TODO show XHR progress
     }
 };
 
@@ -495,29 +509,23 @@ function onCommand(context, args)
 // class whose instance is silently returned to the console
 function IncludeDefaultReturnValue()
 {
-    this.listeners = {};
-    this.done = function(listeners)
-    {
-        if (typeof listeners === "function")
-            this.listeners["onSuccess"] = listeners;
-        else if (Object.prototype.toString.call(listeners) === "[object Object]")
-        {
-            // xxxFlorent: is there a more elegant way to copy properties?
-            for (var i in listeners)
-            {
-                if (listeners.hasOwnProperty(i))
-                    this.listeners[i] = listeners[i];
-            }
-        }
-        return this;
-    };
-    this.__exposedProps__ = {
-        done: "r"
-    };
+    // call the constructor of Promise:
+    Promise.call(this);
+
+    this.__exposedProps__ = Obj.extend(this.__exposedProps__, {
+        then: "r",
+    });
 };
 
 // inheritance:
+//   * from DefaultReturnValue
 IncludeDefaultReturnValue.prototype = new Firebug.Console.DefaultReturnValue();
+
+//   * from Promise
+IncludeDefaultReturnValue.prototype =
+    Obj.descend(IncludeDefaultReturnValue.prototype, Promise.prototype);
+
+
 
 function IncludeEditor(doc)
 {
