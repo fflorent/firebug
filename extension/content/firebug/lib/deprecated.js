@@ -13,39 +13,47 @@ const Ci = Components.interfaces;
 
 var consoleService = Cc["@mozilla.org/consoleservice;1"].getService(Ci["nsIConsoleService"]);
 
+var naggedCache = new WeakMap();
+
 // ********************************************************************************************* //
 // Module implementation
 
 var Deprecated = {};
+
 Deprecated.deprecated = function(msg, fnc, args)
 {
     return function deprecationWrapper()
     {
-        if (!this.nagged)
+        if (!naggedCache.get(fnc))
         {
-            // drop frame with deprecated()
-            var caller = Components.stack.caller;
-            var explain = "Deprecated function, " + msg;
+            Deprecated.log(msg);
 
-            if (typeof(FBTrace) !== undefined)
-            {
-                FBTrace.sysout(explain, getStackDump());
-
-                //if (exc.stack)
-                //    exc.stack = exc.stack.split("\n");
-
-                FBTrace.sysout(explain + " " + caller.toString());
-            }
-
-            if (consoleService)
-                consoleService.logStringMessage(explain + " " + caller.toString());
-
-            this.nagged = true;
+            naggedCache.set(fnc, true);
         }
 
         return fnc.apply(this, args || arguments);
     }
 };
+
+Deprecated.log = function(msg)
+{
+    // drop frame with deprecated()
+    var caller = Components.stack.caller;
+    var explain = "Deprecated function, " + msg;
+
+    if (typeof(FBTrace) !== undefined)
+    {
+        FBTrace.sysout(explain, getStackDump());
+
+        //if (exc.stack)
+        //    exc.stack = exc.stack.split("\n");
+
+        FBTrace.sysout(explain + " " + caller.toString());
+    }
+
+    if (consoleService)
+        consoleService.logStringMessage(explain + " " + caller.toString());
+}
 
 // ********************************************************************************************* //
 // Local helpers

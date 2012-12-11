@@ -9,6 +9,7 @@ define([
     "firebug/lib/search",
     "firebug/lib/xml",
     "firebug/lib/options",
+    "firebug/lib/deprecated",
     "firebug/console/profiler",
     "firebug/chrome/searchBox",
     "firebug/console/consolePanel",
@@ -16,7 +17,7 @@ define([
     "firebug/console/functionMonitor",
     "firebug/console/performanceTiming",
 ],
-function(Obj, Firebug, Firefox, Events, Win, Search, Xml, Options) {
+function(Obj, Firebug, Firefox, Events, Win, Search, Xml, Options, Deprecated) {
 
 // ********************************************************************************************* //
 // Constants
@@ -468,16 +469,11 @@ Firebug.Console = Obj.extend(ActivableConsole,
     {
         if (value === "_firebugIgnore")
         {
-            if (FBTrace.DBG_CONSOLE)
-            {
-                FBTrace.sysout("WARNING: Firebug.Console.isDefaultReturnValue; \"_firebugIgnore\" "+
-                    "is deprecated. Please, use Firebug.Console.getDefaultReturnValue(win) "+
-                    "instead");
-            }
+            Deprecated.log("Please, use Firebug.Console.getDefaultReturnValue(win) instead");
 
             return true;
         }
-        var defaultValue = this.getDefaultReturnValue();
+        var defaultValue = this.getDefaultReturnValue(win);
 
         // check if the value is the default one or inherits from DefaultReturnValue:
         return value === defaultValue || value instanceof Firebug.Console.DefaultReturnValue;
