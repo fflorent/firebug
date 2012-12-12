@@ -53,7 +53,7 @@ Cu.import("resource://firebug/storageService.js", storageScope);
 // Promise:
 
 var promiseScope = {};
-Cu.import("resource://gre/modules/devtools/_Promise.jsm", promiseScope);
+Cu.import("resource://gre/modules/commonjs/promise/core.js", promiseScope);
 var Promise = promiseScope.Promise;
 
 
@@ -509,8 +509,18 @@ function onCommand(context, args)
 // class whose instance is silently returned to the console
 function IncludeDefaultReturnValue()
 {
-    // call the constructor of Promise:
-    Promise.call(this);
+    // create a new promise:
+    var deferred = Promise.defer();
+    var promise = deferred.promise;
+
+    this.then = function()
+    {
+        promise.then.apply(promise, arguments);
+        return this;
+    };
+
+    this.reject = deferred.reject;
+    this.resolve = deferred.resolve;
 
     this.__exposedProps__ = Obj.extend(this.__exposedProps__, {
         then: "r",
@@ -518,14 +528,7 @@ function IncludeDefaultReturnValue()
 };
 
 // inheritance:
-//   * from DefaultReturnValue
 IncludeDefaultReturnValue.prototype = new Firebug.Console.DefaultReturnValue();
-
-//   * from Promise
-IncludeDefaultReturnValue.prototype =
-    Obj.descend(IncludeDefaultReturnValue.prototype, Promise.prototype);
-
-
 
 function IncludeEditor(doc)
 {
