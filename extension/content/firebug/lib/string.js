@@ -786,6 +786,25 @@ Str.convertFromUnicode = function(text, charset)
 };
 
 // ********************************************************************************************* //
+// Syntax Checker
+
+Str.isValidJS = function(codeToCheck)
+{
+    try
+    {
+        new Function(codeToCheck);
+        return true;
+    }
+    catch(ex)
+    {
+        if (ex instanceof SyntaxError)
+            return false;
+        else
+            throw ex;
+    }
+};
+
+// ********************************************************************************************* //
 
 Str.safeToString = function(ob)
 {

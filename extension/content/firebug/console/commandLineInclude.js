@@ -432,6 +432,15 @@ var CommandLineInclude =
             if (xhr.status !== 200)
                 return errorFunction.apply(this, arguments);
             var codeToEval = xhr.responseText;
+
+            // test if the content is an HTML file, which is the most current after a mistake
+            if (!Str.isValidJS(codeToEval))
+            {
+                CommandLineInclude.log("invalidSyntax", [], [context, "error"]);
+                CommandLineInclude.clearLoadingMessage(loadingMsgRow);
+                return;
+            }
+
             Firebug.CommandLine.evaluateInWebPage(codeToEval, context);
             if (successFunction)
                 successFunction(xhr);
