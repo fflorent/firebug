@@ -83,7 +83,7 @@ const DirTablePlate = domplate(Firebug.Rep,
                 role: "presentation"},
                 DIV({"class": "memberLabel $member.type\\Label", title: "$member.title"},
                     SPAN({"class": "memberLabelPrefix"}, "$member.prefix"),
-                    SPAN({title: "$member.title"}, "$member.name")
+                    SPAN({title: "$member|getMemberNameTooltip"}, "$member.name")
                 )
             ),
             TD({"class": "memberValueCell", $readOnly: "$member.readOnly",
@@ -140,6 +140,11 @@ const DirTablePlate = domplate(Firebug.Rep,
             tag: Firebug.Rep.tag,
             prefix: ""
         }];
+    },
+
+    getMemberNameTooltip: function(member)
+    {
+        return member.title || member.scopeNameTooltip;
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -541,42 +546,67 @@ Firebug.DOMBasePanel.prototype = Obj.extend(Firebug.Panel,
                 var ordinal = parseInt(name);
                 if (ordinal || ordinal == 0)
                 {
-                    this.addMember(object, "ordinal", ordinals, name, val, level, 0, context, isScope);
+                    this.addMember(object, "ordinal", ordinals, name, val, level, 0, context,
+                        isScope);
                 }
                 else if (typeof(val) == "function")
                 {
                     if (isClassFunction(val))
                     {
                         if (Dom.isDOMMember(object, name))
-                            this.addMember(object, "domClass", domClasses, name, val, level, domMembers[name], context, isScope);
+                        {
+                            this.addMember(object, "domClass", domClasses, name, val, level,
+                                domMembers[name], context, isScope);
+                        }
                         else
-                            this.addMember(object, "userClass", userClasses, name, val, level, 0, context, isScope);
+                        {
+                            this.addMember(object, "userClass", userClasses, name, val, level, 0,
+                                context, isScope);
+                        }
                     }
                     else if (Dom.isDOMMember(object, name))
                     {
-                        this.addMember(object, "domFunction", domFuncs, name, val, level, domMembers[name], context, isScope);
+                        this.addMember(object, "domFunction", domFuncs, name, val, level,
+                            domMembers[name], context, isScope);
                     }
                     else if (!Firebug.showUserFuncs && Firebug.showInlineEventHandlers)
                     {
-                        this.addMember(object, "userFunction", domHandlers, name, val, level, 0, context, isScope);
+                        this.addMember(object, "userFunction", domHandlers, name, val, level, 0,
+                            context, isScope);
                     }
                     else
                     {
-                        this.addMember(object, "userFunction", userFuncs, name, val, level, 0, context, isScope);
+                        this.addMember(object, "userFunction", userFuncs, name, val, level, 0, 
+                            context, isScope);
                     }
                 }
                 else
                 {
                     if (isPrototype(name))
-                        this.addMember(object, "proto", proto, name, val, level, 0, context, isScope);
+                    {
+                        this.addMember(object, "proto", proto, name, val, level, 0, context,
+                            isScope);
+                    }
                     else if (Dom.isDOMMember(object, name))
-                        this.addMember(object, "dom", domProps, name, val, level, domMembers[name], context, isScope);
+                    {
+                        this.addMember(object, "dom", domProps, name, val, level, domMembers[name],
+                            context, isScope);
+                    }
                     else if (Dom.isDOMConstant(object, name))
-                        this.addMember(object, "dom", domConstants, name, val, level, 0, context, isScope);
+                    {
+                        this.addMember(object, "dom", domConstants, name, val, level, 0, context,
+                            isScope);
+                    }
                     else if (Dom.isInlineEventHandler(name))
-                        this.addMember(object, "user", domHandlers, name, val, level, 0, context, isScope);
+                    {
+                        this.addMember(object, "user", domHandlers, name, val, level, 0, context,
+                            isScope);
+                    }
                     else
-                        this.addMember(object, "user", userProps, name, val, level, 0, context, isScope);
+                    {
+                        this.addMember(object, "user", userProps, name, val, level, 0, context, 
+                            isScope);
+                    }
                 }
             }
 
@@ -691,6 +721,10 @@ Firebug.DOMBasePanel.prototype = Obj.extend(Firebug.Panel,
              (valueType == "object" && value != null) ||
              (valueType == "string" && value.length > Firebug.stringCropLength));
 
+        var scopeNameTooltip;
+        if (parentIsScope)
+            scopeNameTooltip= Locale.$STRF("dom.tip.scopeMemberName", ["%"+name]);
+
         // Special case for closure inspection.
         if (!hasChildren && valueType === "function" && Firebug.showClosures && context)
         {
@@ -728,6 +762,7 @@ Firebug.DOMBasePanel.prototype = Obj.extend(Firebug.Panel,
             object: object,
             name: name,
             value: value,
+            scopeNameTooltip: scopeNameTooltip,
             type: type,
             rowClass: "memberRow-"+type,
             open: "",
