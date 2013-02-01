@@ -18,13 +18,9 @@ function(Obj, Firebug, Domplate, Locale, Events, Wrapper, Dom, Str, Arr, Closure
 // ********************************************************************************************* //
 // Constants
 
+const Cu = Components.utils;
 const kwActions = ["throw", "return", "in", "instanceof", "delete", "new",
                    "typeof", "void", "yield"];
-const kwAll = ["break", "case", "catch", "const", "continue", "debugger",
-  "default", "delete", "do", "else", "false", "finally", "for", "function",
-  "get", "if", "in", "instanceof", "let", "new", "null", "return", "set",
-  "switch", "this", "throw", "true", "try", "typeof", "var", "void", "while",
-  "with", "yield"];
 const reOpenBracket = /[\[\(\{]/;
 const reCloseBracket = /[\]\)\}]/;
 const reJSChar = /[a-zA-Z0-9$_]/;
@@ -1829,18 +1825,14 @@ function setCompletionsFromScope(out, object, context)
 
 function getNewlyDeclaredNames(js)
 {
-    // XXXsimon: In the future, machinery from issue 5291 could perhaps replace this.
-    var re = /\b[a-zA-Z_$][a-zA-Z0-9_$]*\b/g;
-    var ar = [], match;
-    while ((match = re.exec(js)) !== null)
+    var sandbox = new Cu.Sandbox("about:blank");
+    var origPropertyNames = Object.getOwnPropertyNames(sandbox);
+    var exp = js.replace(/;?[^;}]*$/m, ";");
+    Cu.evalInSandbox(exp, sandbox);
+    return Object.getOwnPropertyNames(sandbox).filter(function(name)
     {
-        if (!/[.%]/.test(js.charAt(match.index - 1)) &&
-            js.charAt(re.lastIndex) !== ":" && kwAll.indexOf(match[0]) === -1)
-        {
-            ar.push(match[0]);
-        }
-    }
-    return ar;
+        return origPropertyNames.indexOf(name) === -1;
+    });
 }
 
 function propChainBuildComplete(out, context, tempExpr, result)
