@@ -211,66 +211,11 @@ Firebug.CSSModule = Obj.extend(Firebug.Module, Firebug.EditorSelector,
 
     cleanupSheets: function(doc, context)
     {
+        // xxxFlorent: although the body of this method is removed, issue 1894 does not seem to occur. 
+        // OK for removing this method entirely?
         if (!context)
             return false;
-
-        // Due to the manner in which the layout engine handles multiple
-        // references to the same sheet we need to kick it a little bit.
-        // The injecting a simple stylesheet then removing it will force
-        // Firefox to regenerate it's CSS hierarchy.
-        //
-        // WARN: This behavior was determined anecdotally.
-        // See http://code.google.com/p/fbug/issues/detail?id=2440
-
-        // This causes additional HTTP request for a font (see 4649).
-        /*if (!Xml.isXMLPrettyPrint(context))
-        {
-            var style = Css.createStyleSheet(doc);
-            style.textContent = "#fbIgnoreStyleDO_NOT_USE {}";
-            Css.addStyleSheet(doc, style);
-
-            if (style.parentNode)
-            {
-                style.parentNode.removeChild(style);
-            }
-            else
-            {
-                if (FBTrace.DBG_ERRORS)
-                    FBTrace.sysout("css.cleanupSheets; ERROR no parent style:", style);
-            }
-        }*/
-
-        var result = true;
-
-        // https://bugzilla.mozilla.org/show_bug.cgi?id=500365
-        // This voodoo touches each style sheet to force some Firefox internal change
-        // to allow edits.
-        var styleSheets = Css.getAllStyleSheets(context);
-        for(var i = 0; i < styleSheets.length; i++)
-        {
-            try
-            {
-                var rules = styleSheets[i].cssRules;
-                if (rules.length > 0)
-                    var touch = rules[0];
-
-                //if (FBTrace.DBG_CSS && touch)
-                //    FBTrace.sysout("css.show() touch "+typeof(touch)+" in "+
-                //        (styleSheets[i].href?styleSheets[i].href:context.getName()));
-            }
-            catch(e)
-            {
-                result = false;
-
-                if (FBTrace.DBG_ERRORS)
-                    FBTrace.sysout("css.show: sheet.cssRules FAILS for " +
-                        (styleSheets[i] ? styleSheets[i].href : "null sheet") + e, e);
-            }
-        }
-
-        // Return true only if all stylesheets are fully loaded and there is no
-        // excpetion when accessing them.
-        return result;
+        return true;
     },
 
     cleanupSheetHandler: function(context, records)
@@ -298,8 +243,8 @@ Firebug.CSSModule = Obj.extend(Firebug.Module, Firebug.EditorSelector,
             }
         });
 
-        if (shouldHandle)
-            this.cleanupSheets(records[0].target.ownerDocument, context);
+        /*if (shouldHandle)
+            this.cleanupSheets(records[0].target.ownerDocument, context);*/
     },
 
     parseCSSValue: function(value, offset)
@@ -544,11 +489,7 @@ Firebug.CSSModule = Obj.extend(Firebug.Module, Firebug.EditorSelector,
 
     loadedContext: function(context)
     {
-        var self = this;
-        Win.iterateWindows(context.browser.contentWindow, function(subwin)
-        {
-            self.cleanupSheets(subwin.document, context);
-        });
+        //self.cleanupSheets(context.window.document, context);
     },
 
     initContext: function(context)
