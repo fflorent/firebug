@@ -221,8 +221,6 @@ Obj.getRandomInt = function(min, max)
     return Math.floor(Math.random() * (max - min + 1) + min);
 };
 
-// xxxFlorent: not sure it is true... But I couldn't find any case where `instanceof` 
-//             didn't work correctly cross-window
 /**
  * Cross Window instanceof
  *
@@ -231,9 +229,8 @@ Obj.getRandomInt = function(min, max)
  *
  * @returns {Boolean} true if the test succeeded, false otherwise
  *
- * @deprecated use <code>instanceof</code> instead
  */
-Obj.XW_instanceof = Deprecated.deprecated("use `instanceof` instead", function(obj, type)
+Obj.XW_instanceof = function(obj, type)
 {
     if (obj instanceof type)
         return true;  // within-window test
@@ -259,7 +256,7 @@ Obj.XW_instanceof = Deprecated.deprecated("use `instanceof` instead", function(o
 
     // https://developer.mozilla.org/en/Core_JavaScript_1.5_Guide/Property_Inheritance_Revisited
     // /Determining_Instance_Relationships
-});
+};
 
 /**
  * Tells if the given property of the provided object is a non-native getter or not.
