@@ -2,9 +2,8 @@
 
 define([
     "firebug/lib/trace",
-    "firebug/lib/deprecated",
 ],
-function(FBTrace, Deprecated) {
+function(FBTrace) {
 "use strict";
 // xxxFlorent: TODO add that specific tag in jsdoc...
 
@@ -59,7 +58,11 @@ Obj.bind = function(fn, thisObject/*, ...origArgs*/)
 Obj.bindFixed = function(fn, thisObject/*, ...args*/)
 {
     var args = Array.prototype.slice.call(arguments, 2);
-    return function() { return fn.apply(thisObject, args); };
+
+    return function()
+    {
+        return fn.apply(thisObject, args);
+    };
 }
 
 /**
@@ -180,21 +183,6 @@ Obj.hasProperties = function(ob, nonEnumProps, ownPropsOnly)
 
     return false;
 };
-
-/**
- * Returns the prototype of an object, or null if the function fails to do so.
- *
- * @deprecated use <code>myObj.prototype</code> instead (plus clever checks before)
- */
-Obj.getPrototype = Deprecated.deprecated("use myObj.prototype instead (+ clever checks before)",
-function(ob)
-{
-    try
-    {
-        return ob.prototype;
-    } catch (exc) {}
-    return null;
-});
 
 /**
  * Returns a unique ID (random integer between 0 and 65536)

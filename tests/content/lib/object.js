@@ -92,14 +92,6 @@ function runTest() {
     })();
 
     // ****************************************************************************************** //
-    FBTest.progress("== Testing Obj.getPrototype ==");
-    (function()
-    {
-        var test = (Obj.getPrototype(Array) === Array.prototype);
-        FBTest.ok(test, "Obj.getPrototype(Array) should return Array.prototype");
-    })();
-
-    // ****************************************************************************************** //
     FBTest.testDone("Testing firebug/lib/object.js; DONE");
 }
 
