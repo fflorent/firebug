@@ -27,7 +27,16 @@ const Ci = Components.interfaces;
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 var maxQueueRequests = 500;
-var defaultReturnValue = Object.preventExtensions(Object.create(null));
+var protoDefaultReturnValue = {
+    toString: function()
+    {
+        return undefined;
+    },
+    __exposedProps__: {
+        toString: "r"
+    }
+};
+var defaultReturnValue = Object.preventExtensions(Object.create(protoDefaultReturnValue));
 
 // ********************************************************************************************* //
 
