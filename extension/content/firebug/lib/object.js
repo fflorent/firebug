@@ -2,33 +2,79 @@
 
 define([
     "firebug/lib/trace",
-    "firebug/lib/array",
-    "firebug/lib/string",
 ],
-function(FBTrace, Arr, Str) {
+function(FBTrace) {
+"use strict";
+// xxxFlorent: TODO add that specific tag in jsdoc...
 
 // ********************************************************************************************* //
 // Constants
 
 var Cu = Components.utils;
 
+/**
+ * @name Obj
+ * @lib Utility for objects
+ */
 var Obj = {};
 
 // ********************************************************************************************* //
 
-Obj.bind = function()  // fn, thisObject, args => thisObject.fn(arguments, args);
+// xxxFlorent: [ES6-REST]
+/**
+ * Creates a new function that, when called, uses the provided <code>this</code> value 
+ * and appends the provided arguments. Note that it differs from Function.prototype.bind which 
+ * prepends the provided arguments (that is why this function is called bindRight).
+ *
+ * @param {function} fn The function to bind
+ * @param {*} thisObject The object to pass as the <code>this</code> value
+ * @param {*} ...args the series of parameters to pass to the new function
+ *
+ * @return {function} the new function
+ */
+Obj.bind = function(fn, thisObject/*, ...origArgs*/)
 {
-   var args = Arr.cloneArray(arguments), fn = args.shift(), object = args.shift();
-   return function bind() { return fn.apply(object, Arr.arrayInsert(Arr.cloneArray(args), 0, arguments)); };
-};
+    var origArgs = Array.prototype.slice.call(arguments, 2);
+    return function(/*...additionalArgs*/)
+    {
+        var additionalArgs = Array.prototype.slice.call(arguments);
+        return fn.apply(thisObject, additionalArgs.concat(origArgs));
+    };
+}
 
-Obj.bindFixed = function() // fn, thisObject, args => thisObject.fn(args);
+// xxxFlorent: TODO: [REST]
+/**
+ * Creates a new function that, when called, uses the provided <code>this</code> value and the
+ * provided arguments.
+ * At the contrary of <code>Function.prototype.bind</code>, any parameter provided at the call is
+ * ignored.
+ *
+ * @param {function} fn The function to bind
+ * @param {*} thisObject The object to pass as the `this` value
+ * @param {*} ...args the series of parameters to pass to the new function
+ *
+ * @return {function} the new Function
+ */
+Obj.bindFixed = function(fn, thisObject/*, ...args*/)
 {
-    var args = Arr.cloneArray(arguments), fn = args.shift(), object = args.shift();
-    return function() { return fn.apply(object, args); };
-};
+    var args = Array.prototype.slice.call(arguments, 2);
 
-Obj.extend = function()
+    return function()
+    {
+        return fn.apply(thisObject, args);
+    };
+}
+
+/**
+ * Merges several objects into one.
+ *
+ * @param {Object} ...objects The objects to merge
+ *
+ * @example
+ * var parentObj = {foo: "foo" };
+ * var newObj = Obj.extend(parentObj, {bar: "bar"}); // => {foo: "foo", bar: "bar"}
+ */
+Obj.extend = function(parentObject/*, ...extensions*/)
 {
     if (arguments.length < 2)
     {
@@ -37,15 +83,30 @@ Obj.extend = function()
     }
 
     var newOb = {};
-    for (var i = 0, len = arguments.length; i < len; ++i)
+    var objects = Array.prototype.slice.call(arguments);
+
+    objects.forEach(function(object)
     {
-        for (var prop in arguments[i])
-            newOb[prop] = arguments[i][prop];
-    }
+        for (var prop in object)
+        {
+            var propDesc = getPropertyDescriptor(object, prop);
+            Object.defineProperty(newOb, prop, propDesc);
+            // newOb[prop] = object[prop];
+        }
+    });
 
     return newOb;
 };
 
+/**
+ * Creates a new instance inheriting from a parent "class".
+ * That class is then extended with child properties.
+ *
+ * @param {Object} protototypeParent The parent "class" prototype
+ * @param {Object} childProperties The properties extending the new object
+ *
+ * @return {Object} the new object
+ */
 Obj.descend = function(prototypeParent, childProperties)
 {
     function protoSetter() {};
@@ -92,7 +153,7 @@ Obj.hasProperties = function(ob, nonEnumProps, ownPropsOnly)
         var type = typeof(ob);
         if (type == "string" && ob.length)
             return true;
-         
+
         if (type === "number" || type === "boolean" || type === "undefined" || ob === null)
             return false;
 
@@ -115,13 +176,6 @@ Obj.hasProperties = function(ob, nonEnumProps, ownPropsOnly)
     }
     catch (exc)
     {
-        // Primitive (non string) objects will throw an exception when passed into
-        // Object.keys or Object.getOwnPropertyNames APIs.
-        // There are also many "security error" exceptions I guess none of which are really
-        // necessary to display in the FBTrace console, so, remove the tracing for now.
-        // if (FBTrace.DBG_ERRORS)
-        //     FBTrace.sysout("lib.hasProperties(" + Str.safeToString(ob) + ") ERROR " + exc, exc);
-
         // workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=648560
         if (ob.wrappedJSObject)
             return true;
@@ -130,27 +184,27 @@ Obj.hasProperties = function(ob, nonEnumProps, ownPropsOnly)
     return false;
 };
 
-Obj.getPrototype = function(ob)
-{
-    try
-    {
-        return ob.prototype;
-    } catch (exc) {}
-    return null;
-};
-
-
+/**
+ * Returns a unique ID (random integer between 0 and 65536)
+ *
+ * @return {Number} the random number
+ */
 Obj.getUniqueId = function()
 {
-    return this.getRandomInt(0,65536);
-};
-
-Obj.getRandomInt = function(min, max)
-{
+    var min = 0;
+    var max = 65536;
     return Math.floor(Math.random() * (max - min + 1) + min);
 };
 
-// Cross Window instanceof; type is local to this window
+/**
+ * Cross Window instanceof
+ *
+ * @param {Object} obj The object to test
+ * @param {*} type The type (local to this window)
+ *
+ * @returns {Boolean} true if the test succeeded, false otherwise
+ *
+ */
 Obj.XW_instanceof = function(obj, type)
 {
     if (obj instanceof type)
@@ -179,49 +233,24 @@ Obj.XW_instanceof = function(obj, type)
     // /Determining_Instance_Relationships
 };
 
-/**
- * Tells if the given property of the provided object is a non-native getter or not.
- * This method depends on PropertyPanel.jsm module available in Firefox 5+
- * isNonNativeGetter has been introduced in Firefox 7
- * The method has been moved to WebConsoleUtils.jsm in Fx 18
- *
- * @param object aObject The object that contains the property.
- * @param string aProp The property you want to check if it is a getter or not.
- * @return boolean True if the given property is a getter, false otherwise.
- */
-Obj.isNonNativeGetter = function(obj, propName)
+// ********************************************************************************************* //
+// Local helpers
+
+// xxxFlorent: [ES6-getPropertyDescriptor]?
+// http://wiki.ecmascript.org/doku.php?id=harmony:extended_object_api
+// xxxFlorent: until there is no need to move it public, this should remain as a local helper
+//             so we prevent potentential future refactoring
+function getPropertyDescriptor(subject, name)
 {
-    try
+    var pd = Object.getOwnPropertyDescriptor(subject, name);
+    var proto = Object.getPrototypeOf(subject);
+    while (pd === undefined && proto !== null)
     {
-        var scope = {};
-        Cu.import("resource://gre/modules/devtools/WebConsoleUtils.jsm", scope);
-
-        if (scope.WebConsoleUtils.isNonNativeGetter)
-        {
-            Obj.isNonNativeGetter = function(obj, propName)
-            {
-                return scope.WebConsoleUtils.isNonNativeGetter(obj, propName);
-            };
-
-            return Obj.isNonNativeGetter(obj, propName);
-        }
+        pd = Object.getOwnPropertyDescriptor(proto, name);
+        proto = Object.getPrototypeOf(proto);
     }
-    catch (err)
-    {
-        if (FBTrace.DBG_ERRORS)
-            FBTrace.sysout("Obj.isNonNativeGetter; EXCEPTION " + err, err);
-    }
-
-    // OK, the method isn't available let's use an empty implementation
-    Obj.isNonNativeGetter = function()
-    {
-        if (FBTrace.DBG_ERRORS)
-            FBTrace.sysout("Obj.isNonNativeGetter; ERROR built-in method not found!");
-        return true;
-    };
-
-    return true;
-};
+    return pd;
+}
 
 // ********************************************************************************************* //
 
