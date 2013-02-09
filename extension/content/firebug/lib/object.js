@@ -245,50 +245,6 @@ Obj.XW_instanceof = function(obj, type)
     // /Determining_Instance_Relationships
 };
 
-/**
- * Tells if the given property of the provided object is a non-native getter or not.
- * This method depends on PropertyPanel.jsm module available in Firefox 5+
- * isNonNativeGetter has been introduced in Firefox 7
- * The method has been moved to WebConsoleUtils.jsm in Fx 18
- *
- * @param {object} obj The object that contains the property.
- * @param {string} propName The property you want to check if it is a getter or not.
- * @return {boolean} True if the given property is a getter, false otherwise.
- */
-Obj.isNonNativeGetter = function(obj, propName)
-{
-    try
-    {
-        var scope = {};
-        Cu.import("resource://gre/modules/devtools/WebConsoleUtils.jsm", scope);
-
-        if (scope.WebConsoleUtils.isNonNativeGetter)
-        {
-            Obj.isNonNativeGetter = function(obj, propName)
-            {
-                return scope.WebConsoleUtils.isNonNativeGetter(obj, propName);
-            };
-
-            return Obj.isNonNativeGetter(obj, propName);
-        }
-    }
-    catch (err)
-    {
-        if (FBTrace.DBG_ERRORS)
-            FBTrace.sysout("Obj.isNonNativeGetter; EXCEPTION " + err, err);
-    }
-
-    // OK, the method isn't available let's use an empty implementation
-    Obj.isNonNativeGetter = function()
-    {
-        if (FBTrace.DBG_ERRORS)
-            FBTrace.sysout("Obj.isNonNativeGetter; ERROR built-in method not found!");
-        return true;
-    };
-
-    return true;
-};
-
 // ********************************************************************************************* //
 // Local helpers
 
