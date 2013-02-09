@@ -446,7 +446,8 @@ Dom.eraseNode = function(node)
  *
  * @return {boolean} True if the object is a node
  */
-Dom.isNode = Deprecated.deprecated("check with <code>o.nodeType</code> instead", function(o)
+Dom.isNode = Deprecated.deprecated("check with <code>o instanceof window.Node</code> instead",
+function(o)
 {
     try
     {
@@ -465,7 +466,8 @@ Dom.isNode = Deprecated.deprecated("check with <code>o.nodeType</code> instead",
  *
  * @return {boolean} True if the object is an element
  */
-Dom.isElement = Deprecated.deprecated("check with <code>o.nodeType</code> instead", function(o)
+Dom.isElement = Deprecated.deprecated("check with <code>o instanceof window.Element</code> instead",
+function(o)
 {
     try
     {
