@@ -27,7 +27,7 @@ var Deprecated = {};
 
 /**
  * Wraps a function to display a deprecation warning message
- * each time that function is called.
+ * each time it is called.
  *
  * @param {string} msg The message to display
  * @param {function} fnc The function to wrap
@@ -51,7 +51,7 @@ Deprecated.deprecated = function(msg, fnc, args)
 };
 
 /**
- * displays a message for deprecation
+ * Displays a deprecation warning message
  *
  * @param {String} msg The message to display
  */
@@ -60,9 +60,8 @@ Deprecated.log = function(msg)
     return log(msg, Components.stack.caller);
 }
 
-// xxxFlorent: might have to be improved. Don't hesitate to tell what you think about it
 /**
- * define and marks a property as deprecated. The defined property is read-only.
+ * Defines and marks a property as deprecated. The defined property is read-only.
  *
  * @param {object} obj The object for  which we define the new property
  * @param {string} propName The name of the property
