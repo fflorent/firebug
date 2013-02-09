@@ -1,16 +1,14 @@
 /* See license.txt for terms of usage */
 
+/*jshint es5:true, curly:false*/
+/*global define:true*/
+
 define([
     "firebug/lib/trace",
 ],
 function(FBTrace) {
 "use strict";
 // xxxFlorent: TODO add that specific tag in jsdoc...
-
-// ********************************************************************************************* //
-// Constants
-
-var Cu = Components.utils;
 
 /**
  * @name Obj
@@ -40,7 +38,7 @@ Obj.bind = function(fn, thisObject/*, ...origArgs*/)
         var additionalArgs = Array.prototype.slice.call(arguments);
         return fn.apply(thisObject, additionalArgs.concat(origArgs));
     };
-}
+};
 
 // xxxFlorent: TODO: [REST]
 /**
@@ -63,7 +61,7 @@ Obj.bindFixed = function(fn, thisObject/*, ...args*/)
     {
         return fn.apply(thisObject, args);
     };
-}
+};
 
 /**
  * Merges several objects into one.
@@ -74,7 +72,7 @@ Obj.bindFixed = function(fn, thisObject/*, ...args*/)
  * var parentObj = {foo: "foo" };
  * var newObj = Obj.extend(parentObj, {bar: "bar"}); // => {foo: "foo", bar: "bar"}
  */
-Obj.extend = function(parentObject/*, ...extensions*/)
+Obj.extend = function(/*, ...objects*/)
 {
     if (arguments.length < 2)
     {
@@ -91,7 +89,6 @@ Obj.extend = function(parentObject/*, ...extensions*/)
         {
             var propDesc = getPropertyDescriptor(object, prop);
             Object.defineProperty(newOb, prop, propDesc);
-            // newOb[prop] = object[prop];
         }
     });
 
@@ -109,9 +106,9 @@ Obj.extend = function(parentObject/*, ...extensions*/)
  */
 Obj.descend = function(prototypeParent, childProperties)
 {
-    function protoSetter() {};
-    protoSetter.prototype = prototypeParent;
-    var newOb = new protoSetter();
+    function ProtoSetter() {}
+    ProtoSetter.prototype = prototypeParent;
+    var newOb = new ProtoSetter();
     for (var n in childProperties)
         newOb[n] = childProperties[n];
     return newOb;
@@ -151,7 +148,8 @@ Obj.hasProperties = function(ob, nonEnumProps, ownPropsOnly)
         }
 
         var type = typeof(ob);
-        if (type == "string" && ob.length)
+        var props;
+        if (type === "string" && ob.length)
             return true;
 
         if (type === "number" || type === "boolean" || type === "undefined" || ob === null)
@@ -214,7 +212,7 @@ Obj.XW_instanceof = function(obj, type)
         return false;
 
     if (!obj)
-        return (type == "undefined");
+        return (type === "undefined");
 
     // compare strings: obj constructor.name to type.name.
     // This is not perfect, we should compare type.prototype to object.__proto__,
@@ -222,7 +220,7 @@ Obj.XW_instanceof = function(obj, type)
     do
     {
         // then the function that constructed us is the argument
-        if (obj.constructor && obj.constructor.name == type.name)
+        if (obj.constructor && obj.constructor.name === type.name)
             return true;
     }
     while(obj = obj.__proto__);  // walk the prototype chain.
