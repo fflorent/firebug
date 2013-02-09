@@ -203,19 +203,8 @@ function(ob)
  */
 Obj.getUniqueId = function()
 {
-    return this.getRandomInt(0,65536);
-};
-
-/**
- * Returns a random integer between min and max
- *
- * @param {Number} min The minimum
- * @param {Number} max The maximum
- *
- * @return {Number} the random number
- */
-Obj.getRandomInt = function(min, max)
-{
+    var min = 0;
+    var max = 65536;
     return Math.floor(Math.random() * (max - min + 1) + min);
 };
 
