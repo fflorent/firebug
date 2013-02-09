@@ -55,16 +55,11 @@ libs.forEach(function(lib)
 {
     for (var p in lib)
     {
-        if (typeof lib[p] === "function")
-        {
-            // FBL.convertToUnicode and FBL.convertFromUnicode were already overriden (twice)
-            // so we let that happen for them only:
-            if (FBL[p] && p !== "convertToUnicode" && p !== "convertFromUnicode")
-                throw new Error("Collision in FBL detected; attempting to override FBL."+p);
-            FBL[p] = Deprecated.deprecated(deprecationMessage, lib[p]);
-        }
-        else
-            Deprecated.deprecatedROProp(FBL, p, deprecationMessage, lib[p], true);
+        // FBL.convertToUnicode and FBL.convertFromUnicode were already overriden (twice)
+        // so we let that happen for them only:
+        if (FBL[p] && p !== "convertToUnicode" && p !== "convertFromUnicode")
+            throw new Error("Collision in FBL detected; attempting to override FBL."+p);
+        FBL[p] = lib[p];
     }
 });
 
