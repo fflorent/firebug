@@ -62,12 +62,10 @@ Obj.bindFixed = function(fn, thisObject/*, ...args*/)
     return function() { return fn.apply(thisObject, args); };
 }
 
-// xxxFlorent: [ES6-REST]
 /**
- * Clones and extend the object (first parameters) with other objects (following parameters).
+ * Merges several objects into one.
  *
- * @param {Object} parentObject The object to clone and extend
- * @param {Object} ...extensions the extensions
+ * @param {Object} ...objects The objects to merge
  *
  * @example
  * var parentObj = {foo: "foo" };
