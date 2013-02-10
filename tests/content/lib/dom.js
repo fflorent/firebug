@@ -282,4 +282,4 @@ function onNewTab(win)
     {
         FBTest.testDone("Testing firebug/lib/dom.js; DONE");
     });
-});
+};
