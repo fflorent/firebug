@@ -9,11 +9,10 @@ define([
     "firebug/lib/events",
     "firebug/lib/css",
     "firebug/lib/locale",
-    "firebug/lib/array",
     "firebug/lib/system",
     "fbtest/testListRep",
 ],
-function(FBTrace, Domplate, Obj, Str, Dom, Events, Css, Locale, Arr, System, TestList) {
+function(FBTrace, Domplate, Obj, Str, Dom, Events, Css, Locale, System, TestList) {
 with (Domplate) {
 
 // ********************************************************************************************* //
@@ -225,7 +224,7 @@ FBTestApp.GroupList = domplate(Firebug.Rep,
     onExpandAll: function(group)
     {
         var table = Dom.getAncestorByClass(group.row, "groupTable");
-        var rows = Arr.cloneArray(table.firstChild.childNodes);
+        var rows = Array.prototype.slice.call(table.firstChild.childNodes);
         for (var i=0; i<rows.length; i++)
             this.expandGroup(rows[i]);
     },
@@ -233,7 +232,7 @@ FBTestApp.GroupList = domplate(Firebug.Rep,
     onCollapseAll: function(group)
     {
         var table = Dom.getAncestorByClass(group.row, "groupTable");
-        var rows = Arr.cloneArray(table.firstChild.childNodes);
+        var rows = Array.prototype.slice.call(table.firstChild.childNodes);
         for (var i=0; i<rows.length; i++)
             this.collapseGroup(rows[i]);
     },

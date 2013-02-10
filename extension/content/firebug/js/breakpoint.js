@@ -797,14 +797,11 @@ Firebug.Breakpoint.BreakpointGroup.prototype =
 
     enumerateBreakpoints: function(callback)
     {
-        var breakpoints = Arr.cloneArray(this.breakpoints);
-        for (var i=0; i<breakpoints.length; i++)
+        var breakpoints = this.breakpoints.slice();
+        return breakpoints.some(function(bp)
         {
-            var bp = breakpoints[i];
-            if (callback(bp))
-                return true;
-        }
-        return false;
+            return callback(bp);
+        });
     },
 
     findBreakpoint: function()

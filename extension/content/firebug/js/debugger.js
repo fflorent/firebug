@@ -15,14 +15,13 @@ define([
     "firebug/lib/css",
     "firebug/chrome/window",
     "firebug/lib/string",
-    "firebug/lib/array",
     "firebug/trace/debug",
     "firebug/js/fbs",
     "firebug/lib/events",
     "firebug/console/errors",
 ],
 function(Obj, Firebug, Firefox, CompilationUnit, Xpcom, FirebugReps, Locale,
-    Wrapper, Url, SourceLink, StackFrame, Css, Win, Str, Arr, Debug, FBS, Events) {
+    Wrapper, Url, SourceLink, StackFrame, Css, Win, Str, Debug, FBS, Events) {
 
 // ********************************************************************************************* //
 // Constants
@@ -134,7 +133,12 @@ Firebug.Debugger = Obj.extend(Firebug.ActivableModule,
     getCurrentFrameKeys: function(context)  // TODO remote, on bti
     {
         // return is safe
-        var globals = Arr.keys(Wrapper.getContentView(context.getCurrentGlobal()));
+        // xxxFlorent: [ES6-Array_Comprehension]
+        var globals = [];
+        var contentView = Wrapper.getContentView(context.getCurrentGlobal());
+        for (var name in contentView)
+            globals.push(name);
+
         if (context.currentFrame)
             return this.getFrameKeys(context.currentFrame, globals);
 

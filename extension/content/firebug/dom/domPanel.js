@@ -446,8 +446,9 @@ Firebug.DOMBasePanel.prototype = Obj.extend(Firebug.Panel,
         try
         {
             // Special case for "arguments", which is not enumerable by for...in statement.
+            // xxxFlorent: [ES6-ARRAY_FROM]
             if (isArguments(object))
-                object = Arr.cloneArray(object);
+                object = Array.prototype.slice.call(object);
 
             var contentView = this.getObjectView(object), properties;
             try

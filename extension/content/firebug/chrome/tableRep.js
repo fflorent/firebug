@@ -109,10 +109,16 @@ FirebugReps.Table = domplate(Firebug.Rep,
             return [obj];
 
         if (FBTrace.DBG_CONSOLE)
-            FBTrace.sysout("FirebugReps.Table.getProps", {obj: obj, arr: Arr.cloneArray(obj)});
+        {
+            FBTrace.sysout("FirebugReps.Table.getProps", {
+                obj: obj,
+                arr: Array.prototype.slice.call(obj)
+            });
+        }
 
-        if (obj.length)
-            return Arr.cloneArray(obj);
+        // xxxFlorent: [ES6-ARRAY_FROM]
+        if (Arr.isArrayLike(obj))
+            return Array.prototype.slice.call(obj);
 
         var arr = [];
         for (var p in obj)

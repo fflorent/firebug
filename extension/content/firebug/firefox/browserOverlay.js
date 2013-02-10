@@ -4,13 +4,12 @@ define([
     "firebug/lib/trace",
     "firebug/lib/options",
     "firebug/lib/locale",
-    "firebug/lib/array",
     "firebug/firefox/browserOverlayLib",
     "firebug/firefox/browserCommands",
     "firebug/firefox/browserMenu",
     "firebug/firefox/browserToolbar",
 ],
-function(FBTrace, Options, Locale, Arr, BrowserOverlayLib, BrowserCommands, BrowserMenu,
+function(FBTrace, Options, Locale, BrowserOverlayLib, BrowserCommands, BrowserMenu,
     BrowserToolbar) {
 
 with (BrowserOverlayLib) {
@@ -77,9 +76,10 @@ BrowserOverlay.prototype =
 
     internationalize: function()
     {
-        // Internationalize all elements with 'fbInternational' class. Clone
-        // before internationalizing.
-        var elements = Arr.cloneArray(this.doc.getElementsByClassName("fbInternational"));
+        // Internationalize all elements with 'fbInternational' class.
+        // Clone before internationalising.
+        var elements = this.doc.getElementsByClassName("fbInternational");
+        elements = Array.prototype.slice.call(elements);
         Locale.internationalizeElements(this.doc, elements, ["label", "tooltiptext", "aria-label"]);
     },
 

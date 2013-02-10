@@ -1,25 +1,41 @@
 /* See license.txt for terms of usage */
 
+/*jshint es5:true, curly:false, esnext:true*/
+/*global define:true, Components:true, XPCNativeWrapper:true*/
+
 define([
     "firebug/lib/trace",
+    "firebug/lib/deprecated",
 ],
-function(FBTrace) {
-
+function(FBTrace, Deprecated) {
+"use strict";
 // ********************************************************************************************* //
 // Constants
 
 const Ci = Components.interfaces;
 const Cu = Components.utils;
+
+
+/**
+ * @name Arr
+ * @lib Utility for Arrays
+ */
 var Arr = {};
+
 
 // ********************************************************************************************* //
 // Arrays
 
-Arr.isArray = Array.isArray || function(obj)
-{
-    return Object.prototype.toString.call(obj) === "[object Array]";
-};
-
+/**
+ * @deprecated use Array.isArray instead
+ */ 
+Arr.isArray = Deprecated.deprecated("Use Array.isArray instead", Array.isArray);
+/**
+ * Returns true if the given object is an Array or an Array-Like object
+ *
+ * @param {*} obj The object
+ * @return true if it is an array-like object or false otherwise
+ */
 Arr.isArrayLike = function(obj)
 {
     try
@@ -28,7 +44,7 @@ Arr.isArrayLike = function(obj)
             return false;
         if (!isFinite(obj.length))
             return false;
-        if (Arr.isArray(obj))
+        if (Array.isArray(obj))
             return true;
         if (typeof obj.callee === "function") // arguments
             return true;
@@ -58,7 +74,11 @@ Arr._isDOMTokenList = function(obj)
 };
 
 // At least sometimes the keys will be on user-level window objects
-Arr.keys = function(map)
+/**
+ * @deprecated Use Object.keys instead
+ * see https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Object/keys
+ */
+Arr.keys = Deprecated.deprecated("Use Object.keys instead or for ... in ", function(map)
 {
     var keys = [];
     try
@@ -72,8 +92,15 @@ Arr.keys = function(map)
     }
 
     return keys;  // return is safe
-};
+});
 
+/**
+ * Returns the values of an object
+ *
+ * @param {*} map The object
+ *
+ * @return {Array} the values
+ */
 Arr.values = function(map)
 {
     var values = [];
@@ -103,86 +130,138 @@ Arr.values = function(map)
     return values;
 };
 
+/**
+ * Removes an item from an array or an array-like object
+ *
+ * @param {Array} list The array
+ * @param {*} item The item to remove from the object
+ *
+ * @return true if an item as been removed, false otherwise
+ */
 Arr.remove = function(list, item)
 {
-    for (var i = 0; i < list.length; ++i)
+    if (!Array.isArray(list))
+        throw new Error("Arr.remove; expected Array object");
+    var index = list.indexOf(item);
+    if (index >= 0)
     {
-        if (list[i] == item)
-        {
-            list.splice(i, 1);
-            return true;
-        }
+        list.splice(index, 1);
+        return true;
     }
     return false;
 };
-
-Arr.sliceArray = function(array, index)
+/**
+ * Same as Arr.remove but removes all the occurences of item
+ *
+ * @param {Array or Array-Like object} list The array
+ * @param {*} item The item to remove from the object
+ *
+ * @return true if an item as been removed, false otherwise
+ */
+Arr.removeAll = function(list, item)
 {
-    var slice = [];
-    for (var i = index; i < array.length; ++i)
-        slice.push(array[i]);
+    var iter = 0;
 
-    return slice;
-};
+    while (Arr.remove(list, item))
+        iter++;
 
-Arr.cloneArray = function(array, fn)
+    return (iter > 0);
+}
+
+/**
+ * Clone an array. If a function is given as second parameter, the function is called for each
+ * elements of the passed array and the results are put in the new one.
+ *
+ * @param {Array or Array-Like object} array The array
+ * @param {function} [fn] The function
+ *
+ * @deprecated Use either Array.slice(array) or Array.map(array, fn) instead. 
+ * see https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Array
+ *
+ */
+Arr.cloneArray = Deprecated.deprecated("use either Array.slice or Array.map instead",
+function(array, fn)
 {
-   var newArray = [], len = array.length;
+    if (fn)
+        return Array.prototype.map.call(array, fn);
+    else
+        return Array.prototype.slice.call(array);
+});
 
-   if (fn)
-       for (var i = 0; i < len; ++i)
-           newArray.push(fn(array[i]));
-   else
-       for (var i = 0; i < len; ++i)
-           newArray.push(array[i]);
-
-   return newArray;
-};
-
+/**
+ * concats two Arrays or Array-like objects
+ *
+ * @param {Array or Array-Like Object} array
+ * @param {Array or Array-Like Object} array2
+ *
+ * @return {Array} a new array with the elements of the two passed arrays
+ */
 Arr.extendArray = function(array, array2)
 {
-   var newArray = [];
-   newArray.push.apply(newArray, array);
-   newArray.push.apply(newArray, array2);
-   return newArray;
-};
+    if (Array.isArray(array) && Array.isArray(array2))
+        return array.concat(array2);
 
-Arr.arrayInsert = function(array, index, other)
-{
-   for (var i = 0; i < other.length; ++i)
-       array.splice(i+index, 0, other[i]);
-
-   return array;
+    var newArray = [];
+    newArray.push.apply(newArray, array);
+    newArray.push.apply(newArray, array2);
+    return newArray;
 };
 
 /**
- * Filter out unique values of an array, saving only the first occurrence of
- * every value. In case the array is sorted, a faster path is taken.
+ * insert elements at a specific index
+ * NOTE: that method modifies the array passed as the first parameter
+ *
+ * @param {Array} array The array in which we insert elements
+ * @param {Integer} index The index
+ * @param {Array or Array-Like object} other The elements to insert
+ *
+ * @return the updated array
  */
-Arr.unique = function(ar, sorted)
+Arr.arrayInsert = function(array, index, other)
 {
-    var ret = [], len = ar.length;
+    if (!Array.isArray(array))
+        throw new Error("Arr.arrayInsert; expected Array object");
+
+    var splice = array.splice.bind(array, index, 0);
+    splice.apply(null, other);
+    return array;
+};
+
+/**
+ * Filters out unique values of an array, saving only the first occurrence of
+ * every value. In case the array is sorted, a faster path is taken.
+ *
+ * @param {Array or Array-Like object} arr The array
+ * @param {Boolean} sorted If set to true, use the faster path
+ *
+ * @return {Array} the array deprived of duplication
+ */
+Arr.unique = function(arr, sorted)
+{
+    var ret = [], len = arr.length;
+    var i;
     if (sorted)
     {
-        for (var i = 0; i < len; ++i)
+        for (i = 0; i < len; ++i)
         {
             // Skip duplicated entries
-            if (i && ar[i-1] === ar[i])
+            if (i && arr[i-1] === arr[i])
                 continue;
-            ret.push(ar[i]);
+            ret.push(arr[i]);
         }
     }
     else
     {
         // Keep a map whose ","-prefixed keys represent the values that have
         // occurred so far in the array (this avoids overwriting e.g. __proto__).
+        // xxxFlorent: [ES6-SET]
         var map = {};
-        for (var i = 0; i < len; ++i)
+        for (i = 0; i < len; ++i)
         {
-            if (!map.hasOwnProperty("," + ar[i]))
+            if (!map.hasOwnProperty("," + arr[i]))
             {
-                ret.push(ar[i]);
-                map["," + ar[i]] = 1;
+                ret.push(arr[i]);
+                map["," + arr[i]] = 1;
             }
         }
     }
@@ -190,20 +269,31 @@ Arr.unique = function(ar, sorted)
 };
 
 /**
- * Sort an array and eliminate duplicates from it.
+ * Sorts an array and eliminate duplicates from it.
+ *
+ * @param {Array or Array-Like object} arr The array
+ * @param {function} sortFunc The function used to sort the array (optional)
+ *
+ * @return {Array} the sorted array
  */
-Arr.sortUnique = function(ar, sortFunc)
+Arr.sortUnique = function(arr, sortFunc)
 {
-    return Arr.unique(ar.slice().sort(sortFunc), true);
+    // make a clone of the array so the original one is preserved
+    // xxxFlorent: [ES6-ARRAY_GENERICS]
+    var arrCopy = Array.prototype.slice.call(arr);
+    return Arr.unique(arrCopy.sort(sortFunc), true);
 };
 
 /**
  * Merge together two arrays, sort the result, and eliminate any duplicates.
+ *
+ * @deprecated use Arr.sortUnique and/or Array.prototype.concat instead
  */
-Arr.merge = function(arr1, arr2, sortFunc)
+Arr.merge = Deprecated.deprecated("use Arr.sortUnique and/or Array.prototype.concat instead",
+function(arr1, arr2, sortFunc)
 {
     return Arr.sortUnique(arr1.concat(arr2), sortFunc);
-};
+});
 
 // ********************************************************************************************* //
 

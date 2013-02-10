@@ -12,7 +12,6 @@ define([
     "firebug/lib/http",
     "firebug/lib/css",
     "firebug/lib/events",
-    "firebug/lib/array",
     "firebug/lib/system",
     "firebug/cookies/baseObserver",
     "firebug/cookies/menuUtils",
@@ -24,7 +23,7 @@ define([
     "firebug/cookies/editCookie",
     "firebug/cookies/cookieClipboard",
 ],
-function(Xpcom, Obj, Locale, Domplate, Dom, Options, Persist, Str, Http, Css, Events, Arr, System,
+function(Xpcom, Obj, Locale, Domplate, Dom, Options, Persist, Str, Http, Css, Events, System,
     BaseObserver, MenuUtils, CookieUtils, Cookie, Breakpoints, CookieEvents,
     CookiePermissions, EditCookie, CookieClipboard) {
 
@@ -1201,7 +1200,8 @@ CookieReps.CookieTable = domplate(CookieReps.Rep,
         var header = Dom.getAncestorByClass(target, "cookieHeaderRow");
 
         // Skip the first column for breakpoints.
-        var columns = Arr.cloneArray(header.childNodes);
+        // xxxFlorent: [ES6-ARRAY_FROM]
+        var columns = Array.prototype.slice.call(header.childNodes);
         columns.shift();
 
         for (var i=0; i<columns.length; i++)

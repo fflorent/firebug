@@ -12,13 +12,12 @@ define([
     "firebug/lib/string",
     "firebug/lib/json",
     "firebug/dom/toggleBranch",
-    "firebug/lib/array",
     "firebug/lib/system",
     "firebug/dom/domPanel",
     "firebug/chrome/reps"
 ],
 function(Obj, Firebug, Domplate, Locale, Events, Css, Dom, Http, Str, Json,
-    ToggleBranch, Arr, System) {
+    ToggleBranch, System) {
 
 // ********************************************************************************************* //
 
@@ -265,7 +264,7 @@ JSONTreePlate.prototype = Obj.extend(Firebug.DOMBasePanel.prototype,
         function sortName(a, b) { return a.name > b.name ? 1 : -1; }
 
         // Sort only if it isn't an array (issue 4382).
-        if (Firebug.sortJsonPreview && !Arr.isArray(object, context.window))
+        if (Firebug.sortJsonPreview && !Array.isArray(object, context.window))
             members.sort(sortName);
 
         return members;

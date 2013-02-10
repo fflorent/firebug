@@ -2,7 +2,6 @@
 
 define([
     "firebug/lib/trace",
-    "firebug/lib/array",
     "firebug/lib/locale",
     "firebug/chrome/window",
     "firebug/lib/dom",
@@ -11,7 +10,7 @@ define([
     "fbtest/testLogger",
     "fbtest/testListLoader",
 ],
-function(FBTrace, Arr, Locale, Win, Dom, Str, Css, TestLogger, TestListLoader) {
+function(FBTrace, Locale, Win, Dom, Str, Css, TestLogger, TestListLoader) {
 
 // ********************************************************************************************* //
 // Constants
@@ -51,7 +50,8 @@ FBTestApp.TestWindowLoader =
     internationalizeUI: function()
     {
         var elements = document.getElementsByClassName("fbInternational");
-        elements = Arr.cloneArray(elements);
+        // xxxFlorent: [ES6-ARRAY_FROM]
+        elements = Array.prototype.slice.call(elements);
 
         var attributes = ["label", "tooltiptext", "pickerTooltiptext", "barTooltiptext",
             "aria-label"];
