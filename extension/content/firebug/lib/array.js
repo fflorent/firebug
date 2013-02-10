@@ -23,36 +23,6 @@ const Cu = Components.utils;
 var Arr = {};
 
 
-// Array Generic methods
-// use them to call Array methods with Array-Like objects (arguments, String, NodeList...)
-// example: var firstArg = Array.forEach(nodeList, func);
-//
-// xxxFlorent: [ES6-ARRAY_GENERICS]
-var ArrayGen = {};
-(function()
-{
-    var methods = [
-        'join', 'reverse', 'sort', 'push', 'pop', 'shift', 'unshift',
-        'splice', 'concat', 'slice', 'indexOf', 'lastIndexOf',
-        'forEach', 'map', 'reduce', 'reduceRight', 'filter',
-        'some', 'every'
-    ];
-
-    methods.forEach(function(methodName)
-    {
-        // xxxFlorent: TODO: [REST]
-        ArrayGen[methodName] = function(thisObj/*, ...args*/)
-        {
-            var args = Array.prototype.slice.call(arguments, 1);
-            return Array.prototype[methodName].apply(thisObj, args);
-        };
-    });
-})();
-
-Object.seal(ArrayGen);
-
-Arr.ArrayGen = ArrayGen;
-
 // ********************************************************************************************* //
 // Arrays
 
@@ -163,17 +133,19 @@ Arr.values = function(map)
 /**
  * Removes an item from an array or an array-like object
  *
- * @param {Array or Array-Like object} list The array
+ * @param {Array} list The array
  * @param {*} item The item to remove from the object
  *
  * @return true if an item as been removed, false otherwise
  */
 Arr.remove = function(list, item)
 {
-    var index = ArrayGen.indexOf(list, item);
+    if (!Array.isArray(list))
+        throw new Error("Arr.remove; expected Array object");
+    var index = list.indexOf(item);
     if (index >= 0)
     {
-        ArrayGen.splice(list, index, 1);
+        list.splice(index, 1);
         return true;
     }
     return false;
@@ -211,9 +183,9 @@ Arr.cloneArray = Deprecated.deprecated("use either Array.slice or Array.map inst
 function(array, fn)
 {
     if (fn)
-        return ArrayGen.map(array, fn);
+        return Array.prototype.map.call(array, fn);
     else
-        return ArrayGen.slice(array);
+        return Array.prototype.slice.call(array);
 });
 
 /**
@@ -248,7 +220,7 @@ Arr.extendArray = function(array, array2)
 Arr.arrayInsert = function(array, index, other)
 {
     if (!Array.isArray(array))
-        throw "Arr.arrayInsert; expected Array object";
+        throw new Error("Arr.arrayInsert; expected Array object");
 
     var splice = array.splice.bind(array, index, 0);
     splice.apply(null, other);
@@ -307,7 +279,8 @@ Arr.unique = function(arr, sorted)
 Arr.sortUnique = function(arr, sortFunc)
 {
     // make a clone of the array so the original one is preserved
-    var arrCopy = ArrayGen.slice(arr);
+    // xxxFlorent: [ES6-ARRAY_GENERICS]
+    var arrCopy = Array.prototype.slice.call(arr);
     return Arr.unique(arrCopy.sort(sortFunc), true);
 };
 
