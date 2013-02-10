@@ -108,7 +108,7 @@ Arr._isDOMTokenList = function(obj)
  * @deprecated Use Object.keys instead
  * see https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Object/keys
  */
-Arr.keys = Deprecated.deprecated("Use Object.keys instead", function(map)
+Arr.keys = Deprecated.deprecated("Use Object.keys instead or for ... in ", function(map)
 {
     var keys = [];
     try
@@ -195,20 +195,6 @@ Arr.removeAll = function(list, item)
 
     return (iter > 0);
 }
-
-/**
- * Returns a shallow copy of a portion of an array.
- * @deprecated use Array.prototype.slice instead
- */
-Arr.sliceArray = Deprecated.deprecated("use Array.prototype.slice instead",
-function(array, index)
-{
-    var slice = [];
-    for (var i = index; i < array.length; ++i)
-        slice.push(array[i]);
-
-    return slice;
-});
 
 /**
  * Clone an array. If a function is given as second parameter, the function is called for each
