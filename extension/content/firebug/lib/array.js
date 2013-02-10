@@ -1,5 +1,8 @@
 /* See license.txt for terms of usage */
 
+/*jshint es5:true, curly:false, esnext:true*/
+/*global define:true, Components:true, XPCNativeWrapper:true*/
+
 define([
     "firebug/lib/trace",
     "firebug/lib/deprecated",
@@ -47,7 +50,6 @@ var ArrayGen = {};
 })();
 
 Object.seal(ArrayGen);
-Object.freeze(ArrayGen);
 
 Arr.ArrayGen = ArrayGen;
 
@@ -279,9 +281,10 @@ Arr.arrayInsert = function(array, index, other)
 Arr.unique = function(arr, sorted)
 {
     var ret = [], len = arr.length;
+    var i;
     if (sorted)
     {
-        for (var i = 0; i < len; ++i)
+        for (i = 0; i < len; ++i)
         {
             // Skip duplicated entries
             if (i && arr[i-1] === arr[i])
@@ -295,7 +298,7 @@ Arr.unique = function(arr, sorted)
         // occurred so far in the array (this avoids overwriting e.g. __proto__).
         // xxxFlorent: [ES6-SET]
         var map = {};
-        for (var i = 0; i < len; ++i)
+        for (i = 0; i < len; ++i)
         {
             if (!map.hasOwnProperty("," + arr[i]))
             {
