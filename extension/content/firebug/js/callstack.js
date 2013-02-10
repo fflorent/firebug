@@ -9,12 +9,11 @@ define([
     "firebug/lib/wrapper",
     "firebug/js/stackFrame",
     "firebug/lib/css",
-    "firebug/lib/array",
     "firebug/lib/dom",
     "firebug/chrome/menu"
 ],
 function(Obj, Firebug, FirebugReps, JavaScriptTool, Events, Wrapper, StackFrame,
-    Css, Arr, Dom, Menu) {
+    Css, Dom, Menu) {
 
 // ********************************************************************************************* //
 // Constants
@@ -326,13 +325,13 @@ Referent.prototype =
      */
     getObjectPathExpression: function()
     {
-        this.objectPathExpr = Arr.cloneArray(this.names).reverse().join('.');
+        this.objectPathExpr = this.names.slice().reverse().join('.');
         return this.objectPathExpr;
     },
 
     getObjectPathObjects: function()
     {
-        this.objChain = Arr.cloneArray(this.values);
+        this.objChain = this.values.slice();
         this.objChain.push(this.object);
         this.objChain.reverse();
         return this.objChain;

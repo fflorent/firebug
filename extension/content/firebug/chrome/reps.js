@@ -736,7 +736,7 @@ FirebugReps.Arr = domplate(FirebugReps.ArrBase,
     {
         try
         {
-            if (Arr.isArray(obj))
+            if (Array.isArray(obj))
                 return true;
             else if (isFinite(obj.length) && typeof obj.callee === "function") // arguments
                 return true;

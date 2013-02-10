@@ -63,6 +63,8 @@ libs.forEach(function(lib)
     }
 });
 
+FBL.SourceLink = SourceLink.SourceLink;
+
 // deprecated
 FBL.$ = Deprecated.deprecated("Use document.getElementById(id) instead", function(id, doc)
 {

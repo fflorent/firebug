@@ -198,8 +198,8 @@ Locale.internationalizeElements = function(doc, elements, attributes)
     {
         var element = elements[i];
 
-        if (typeof(elements) == "string")
-            element = doc.getElementById(elements[i]);
+        if (typeof(element) === "string")
+            element = doc.getElementById(element);
 
         if (!element)
             continue;

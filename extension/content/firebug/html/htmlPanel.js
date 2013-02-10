@@ -368,7 +368,7 @@ Firebug.HTMLPanel.prototype = Obj.extend(WalkingPanel,
             // with .nodeHidden (not just through CSS inheritance), so we need
             // to recheck the visibility of those.
             node.classList.remove("nodeHidden");
-            var desc = Arr.cloneArray(node.getElementsByClassName("nodeHidden"));
+            var desc = Array.prototype.slice.call(node.getElementsByClassName("nodeHidden"));
             for (var i = 0; i < desc.length; ++i)
             {
                 if (Xml.isVisible(desc[i].repObject))
@@ -2077,7 +2077,8 @@ Firebug.HTMLPanel.CompleteElement = domplate(FirebugReps.Element,
 
         if (Firebug.showTextNodesWithWhitespace)
         {
-            return Arr.cloneArray(node.childNodes);
+            // xxxFlorent: [ES6-ARRAY_FROM]
+            return Array.prototype.slice.call(node.childNodes);
         }
         else
         {

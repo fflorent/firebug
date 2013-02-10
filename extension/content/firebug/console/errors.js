@@ -8,10 +8,9 @@ define([
     "firebug/console/console",
     "firebug/lib/css",
     "firebug/chrome/window",
-    "firebug/lib/array",
     "firebug/lib/string"
 ],
-function(Obj, Firebug, FirebugReps, Xpcom, Console, Css, Win, Arr, Str) {
+function(Obj, Firebug, FirebugReps, Xpcom, Console, Css, Win, Str) {
 
 // ********************************************************************************************* //
 // Constants
@@ -404,9 +403,10 @@ var Errors = Firebug.Errors = Obj.extend(Firebug.Module,
             false, true], true);
     },
 
-    delayedLogging: function()
+    // [ES6-REST]
+    delayedLogging: function(/*...args*/)
     {
-        var args = Arr.cloneArray(arguments);
+        var args = Array.prototype.slice.call(arguments);
         var msgId = args.shift();
         var context = args.shift();
         var row = Console.log.apply(Console, args);

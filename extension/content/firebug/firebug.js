@@ -216,13 +216,16 @@ window.Firebug =
         if (FBTrace.DBG_INITIALIZE)
             FBTrace.sysout("Firebug.internationalizeUI");
 
-        var elements = doc.getElementsByClassName("fbInternational");
-        elements = Arr.cloneArray(elements);
         var attributes = ["label", "tooltiptext", "aria-label"];
+        var elements = doc.getElementsByClassName("fbInternational");
+        // Make a copy of elements before calling Locale.internationalize
+        // Note: this way is faster than querySelectorAll: http://goo.gl/512NG
+        // xxxFlorent: [ES6-ARRAY_FROM]
+        elements = Array.prototype.slice.call(elements);
         for (var i=0; i<elements.length; i++)
         {
             var element = elements[i];
-            Css.removeClass(elements[i], "fbInternational");
+            Css.removeClass(element, "fbInternational");
             for (var j=0; j<attributes.length; j++)
             {
                 if (element.hasAttribute(attributes[j]))

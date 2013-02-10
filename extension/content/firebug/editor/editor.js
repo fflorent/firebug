@@ -9,11 +9,10 @@ define([
     "firebug/lib/css",
     "firebug/lib/dom",
     "firebug/lib/string",
-    "firebug/lib/array",
     "firebug/chrome/menu",
     "firebug/trace/debug",
 ],
-function(Obj, Firebug, Domplate, Locale, Events, Css, Dom, Str, Arr, Menu, Debug) {
+function(Obj, Firebug, Domplate, Locale, Events, Css, Dom, Str, Menu, Debug) {
 
 // ********************************************************************************************* //
 // Constants
@@ -1321,7 +1320,8 @@ Firebug.AutoCompleter = function(caseSensitive, getRange, evaluator, getNewPropS
             return;
         }
 
-        candidates = Arr.cloneArray(values);
+        // xxxFlorent: [ES6-ARRAY_FROM]
+        candidates = Array.prototype.slice.call(values);
         lastIndex = searchIndex;
     };
 

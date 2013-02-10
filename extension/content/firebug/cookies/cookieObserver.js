@@ -19,10 +19,9 @@ define([
     "firebug/cookies/cookie",
     "firebug/cookies/breakpoints",
     "firebug/cookies/cookieEvents",
-    "firebug/lib/array",
 ],
 function(Xpcom, Obj, Locale, Domplate, Dom, Options, Persist, Str, Http, Css, Events,
-    BaseObserver, TabWatcher, CookieReps, CookieUtils, Cookie, Breakpoints, CookieEvents, Arr) {
+    BaseObserver, TabWatcher, CookieReps, CookieUtils, Cookie, Breakpoints, CookieEvents) {
 
 // ********************************************************************************************* //
 // Constants
@@ -99,7 +98,8 @@ var CookieObserver = Obj.extend(BaseObserver,
     iterateContexts: function(fn)
     {
         var oThis = this;
-        var args = Arr.cloneArray(arguments);
+        // xxxFlorent: [ES6-ARRAY_FROM]; is that intended that we have `fn` in `args` ?
+        var args = Array.prototype.slice.call(arguments);
         TabWatcher.iterateContexts(function(context)
         {
             args[0] = context;

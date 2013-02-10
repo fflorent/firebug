@@ -15,7 +15,6 @@ define([
     "firebug/lib/search",
     "firebug/lib/string",
     "firebug/lib/json",
-    "firebug/lib/array",
     "firebug/dom/toggleBranch",
     "firebug/lib/dragdrop",
     "firebug/net/netUtils",
@@ -33,7 +32,7 @@ define([
     "firebug/net/netMonitor"
 ],
 function(Obj, Firebug, Firefox, Domplate, Locale, Events, Options, Url, Css, Dom, Win, Search, Str,
-    Json, Arr, ToggleBranch, DragDrop, NetUtils, NetProgress, Http) {
+    Json, ToggleBranch, DragDrop, NetUtils, NetProgress, Http) {
 
 with (Domplate) {
 
@@ -312,7 +311,9 @@ Firebug.NetMonitor.NetRequestTable = domplate(Firebug.Rep, new Firebug.Listener(
 
         // Iterate all columns except of the first one for breakpoints.
         var header = Dom.getAncestorByClass(target, "netHeaderRow");
-        var columns = Arr.cloneArray(header.childNodes);
+
+        // xxxFlorent: [ES6-ARRAY_FROM]
+        var columns = Array.prototype.slice.call(header.childNodes);
         columns.shift();
         for (var i=0; i<columns.length; i++)
         {

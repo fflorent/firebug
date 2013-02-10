@@ -680,7 +680,8 @@ Firebug.CSSStyleSheetPanel.prototype = Obj.extend(Firebug.Panel,
         var base = Xml.getNodeName(el), autofill;
         if (el.className)
         {
-            autofill = "." + Arr.cloneArray(el.classList).join(".");
+            // xxxFlorent: [ES6-ARRAY_GENERICS]
+            autofill = "." + Array.prototype.join.call(el.classList, ".");
         }
         else
         {
@@ -692,7 +693,7 @@ Firebug.CSSStyleSheetPanel.prototype = Obj.extend(Firebug.Panel,
                 if (el.id !== "")
                     autofill = "#" + el.id;
                 else if (el.className !== "")
-                    autofill = "." + Arr.cloneArray(el.classList).join(".");
+                    autofill = "." + Array.prototype.join.call(el.classList, ".");
                 el = el.parentNode;
             }
             if (autofill)
@@ -2401,7 +2402,7 @@ CSSRuleEditor.prototype = domplate(SelectorEditor.prototype,
 
             cssText.push("}");
             cssText = cssText.join("");
-            
+ 
             try
             {
                 var insertLoc = CSSModule.insertRule(styleSheet, cssText, ruleIndex);

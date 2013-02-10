@@ -3,7 +3,6 @@
 define([
     "firebug/lib/trace",
     "firebug/lib/locale",
-    "firebug/lib/array",
     "firebug/lib/events",
     "firebug/lib/dom",
     "firebug/lib/object",
@@ -15,7 +14,7 @@ define([
     "fbtest/testListRep",
     "fbtest/testProgress",
 ],
-function(FBTrace, Locale, Arr, Events, Dom, Obj, Str, Http, Url, Css,
+function(FBTrace, Locale, Events, Dom, Obj, Str, Http, Url, Css,
     TestResultRep, TestList, TestProgress) {
 
 // ********************************************************************************************* //
@@ -64,7 +63,7 @@ FBTestApp.TestRunner = Obj.extend(new Firebug.Listener(),
             FBTestApp.TestConsole.testCasePath,
             FBTestApp.TestConsole.driverBaseURI);
 
-        tests = Arr.cloneArray(tests);
+        tests = tests.slice();
 
         FBTestApp.Preferences.save();
         FBTestApp.TestSummary.clear();

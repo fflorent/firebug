@@ -103,7 +103,7 @@ Firebug.Spy = Obj.extend(Firebug.Module,
         // Make sure that all Spies in progress are detached at this moment.
         // Clone the array beforehand since the spy object is removed from the
         // original array within detach.
-        var spies = context.spies ? Arr.cloneArray(context.spies) : [];
+        var spies = context.spies ? context.spies.slice() : [];
         for (var i=0; i<spies.length; i++)
             spies[i].detach(true);
 

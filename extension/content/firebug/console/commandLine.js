@@ -957,8 +957,9 @@ Firebug.CommandLine.CommandHandler = Obj.extend(Object,
         var contentView = Wrapper.getContentView(win), hosed_userObjects;
         if (contentView)
             hosed_userObjects = contentView._FirebugCommandLine.userObjects;
-
-        var userObjects = hosed_userObjects ? Arr.cloneArray(hosed_userObjects) : [];
+        // xxxFlorent: [ES6-ARRAY_FROM] 
+        // xxxFlorent: is userObjects useful for FBTrace.sysout?
+        var userObjects = hosed_userObjects ? Array.prototype.slice.call(hosed_userObjects) : [];
 
         if (FBTrace.DBG_COMMANDLINE)
             FBTrace.sysout("commandLine.CommandHandler for " + Win.getWindowId(win) +
@@ -1043,8 +1044,8 @@ function FirebugCommandLineAPI(context)
         {
             result = context.baseWindow.document.querySelectorAll(selector);
         }
-
-        return Arr.cloneArray(result);
+        // xxxFlorent: [ES6-ARRAY_FROM]
+        return Array.prototype.slice.call(result);
     };
 
     // returns unwrapped elements from the page
