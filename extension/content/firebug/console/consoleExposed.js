@@ -27,7 +27,7 @@ function createFirebugConsole(context, win)
 {
     // Defined as a chrome object, but exposed into the web content scope.
     var console = {
-        __exposedProps__: {}
+        __exposedProps__: Object.create(null)
     };
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -287,6 +287,10 @@ function createFirebugConsole(context, win)
     console.__exposedProps__.error = "r";
     //console.__exposedProps__.memoryProfile = "r";
     //console.__exposedProps__.memoryProfileEnd = "r";
+
+    // don't print the source of the function in the console:
+    for (var i in console.__exposedProps__)
+        console[i].displayName = i;
 
     // DBG console.uid = Math.random();
 

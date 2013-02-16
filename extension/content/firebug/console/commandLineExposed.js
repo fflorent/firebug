@@ -76,18 +76,39 @@ function createFirebugCommandLine(context, win)
         };
     }
 
-    function createConsoleCopy(console)
+    // xxxFlorent: [ES6-LET] 
+    // without `let`, we need to create such a function to avoid that situation:
+    // http://tinyurl.com/3xewbmr
+    function copyConsoleMethod(console, copy, methodName)
     {
-        var copy = Obj.extend(console, {
-            __exposedProps__: {}
+        var func = console[methodName];
+        Object.defineProperty(copy, methodName, {
+            get: function()
+            {
+                return func;
+            },
+            set: function(_func)
+            {
+                func = _func;
+                // xxxFlorent: TODO make it proper => check that window.console has not been altered
+                try
+                {
+                    context.window.wrappedJSObject.console[methodName] = _func;
+                }
+                catch (ex) {}
+            },
+            enumerable: true
         });
 
+        copy.__exposedProps__[methodName] = "rw";
+    }
+
+    function createConsoleCopy(console)
+    {
+        var copy = {__exposedProps__: Object.create(null)};
+
         for (var i in console.__exposedProps__)
-        {
-            copy.__exposedProps__[i] = "rw";
-            // don't print the source of the function in the console:
-            copy[i].displayName = i;
-        }
+            copyConsoleMethod(console, copy, i);
 
         return copy;
     }
