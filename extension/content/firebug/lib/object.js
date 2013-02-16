@@ -231,6 +231,26 @@ Obj.XW_instanceof = function(obj, type)
     // /Determining_Instance_Relationships
 };
 
+
+// xxxFlorent: [ES6-getPropertyNames]?
+// http://wiki.ecmascript.org/doku.php?id=harmony:extended_object_api
+Obj.getPropertyNames = function(subject, name) {
+    var props = Object.getOwnPropertyNames(subject);
+    var proto = Object.getPrototypeOf(subject);
+    while (proto !== null) {
+        props = props.concat(Object.getOwnPropertyNames(proto));
+        proto = Object.getPrototypeOf(proto);
+    }
+
+    // make elements of `props` unique:
+    props = props.sort().filter(function(name, index)
+    {
+        return name !== props[index+1];
+    });
+
+    return props;
+}
+
 // ********************************************************************************************* //
 // Local helpers
 

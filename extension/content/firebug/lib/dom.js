@@ -923,8 +923,6 @@ Dom.scrollTo = function(element, scrollBox, alignmentX, alignmentY, scrollWhenVi
         FBTrace.sysout("dom.scrollTo", element.innerHTML);
 };
 
-// xxxFlorent: read it (same as Dom.scrollTo)
-
 /**
  * Centers an element inside a scrollable area
  * @param {Object} element Element to scroll to
@@ -1046,6 +1044,13 @@ Dom.deleteMappedData = function(node, key)
 // ********************************************************************************************* //
 // DOM Members
 
+/**
+ * Returns the DOM members of a node, a window, a location or an event
+ *
+ * @param {*} object The object
+ *
+ * @return {Array} the members
+ */
 Dom.getDOMMembers = function(object)
 {
     if (!domMemberCache)
@@ -2008,8 +2013,6 @@ domMemberMap.Document = Arr.extendArray(domMemberMap.Node,
     "anchors",
     "embeds",
     "plugins",
-    "applets",
-
     "width",
     "height",
 
