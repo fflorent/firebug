@@ -6,8 +6,9 @@ define([
     "firebug/lib/wrapper",
     "firebug/lib/events",
     "firebug/lib/dom",
+    "firebug/lib/object",
 ],
-function(Wrapper, Events, Dom) {
+function(Wrapper, Events, Dom, Obj) {
 "use strict";
 
 // ********************************************************************************************* //
@@ -16,7 +17,7 @@ function(Wrapper, Events, Dom) {
 // List of command line APIs
 var commands = ["$", "$$", "$x", "$n", "cd", "clear", "inspect", "keys",
     "values", "debug", "undebug", "monitor", "unmonitor", "traceCalls", "untraceCalls",
-    "traceAll", "untraceAll", "copy" /*, "memoryProfile", "memoryProfileEnd"*/];
+    "traceAll", "untraceAll", "copy", "console"/*, "memoryProfile", "memoryProfileEnd"*/];
 
 // List of shortcuts for some console methods
 var consoleShortcuts = ["dir", "dirxml", "table"];
@@ -75,6 +76,22 @@ function createFirebugCommandLine(context, win)
         };
     }
 
+    function createConsoleCopy(console)
+    {
+        var copy = Obj.extend(console, {
+            __exposedProps__: {}
+        });
+
+        for (var i in console.__exposedProps__)
+        {
+            copy.__exposedProps__[i] = "rw";
+            // don't print the source of the function in the console:
+            copy[i].displayName = i;
+        }
+
+        return copy;
+    }
+
     // Define command line methods
     for (var i=0; i<commands.length; i++)
     {
@@ -89,6 +106,10 @@ function createFirebugCommandLine(context, win)
     }
 
     var console = Firebug.ConsoleExposed.createFirebugConsole(context, win);
+
+    // inject console in _FirebugCommandLine:
+    commandLine.console = createConsoleCopy(console);
+    commandLine.__exposedProps__.console = "rw";
 
     // Define shortcuts for some console methods
     for (var i=0; i<consoleShortcuts.length; i++)
