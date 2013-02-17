@@ -76,41 +76,72 @@ function createFirebugCommandLine(context, win)
         };
     }
 
-    // xxxFlorent: [ES6-LET] 
-    // without `let`, we need to create such a function to avoid that situation:
-    // http://tinyurl.com/3xewbmr
-    function copyConsoleMethod(console, copy, methodName)
+    // returns the proxy for the console:
+    function getConsoleProxy(console)
     {
-        var func = console[methodName];
-        Object.defineProperty(copy, methodName, {
-            get: function()
-            {
-                return func;
-            },
-            set: function(_func)
-            {
-                func = _func;
-                // xxxFlorent: TODO make it proper => check that window.console has not been altered
-                try
-                {
-                    context.window.wrappedJSObject.console[methodName] = _func;
-                }
-                catch (ex) {}
-            },
-            enumerable: true
-        });
+        var consoleProxyID = "commandline-consoleProxy";
+        var consoleProxy = Dom.getMappedData(win.document, consoleProxyID);
 
-        copy.__exposedProps__[methodName] = "rw";
+        // per-window singleton:
+        if (consoleProxy)
+            return consoleProxy;
+
+        // in our case, we want every exposed properties to be read/write
+        for (var i in console.__exposedProps__)
+            console.__exposedProps__[i] = "rw";
+
+        var proxyHandler = {
+            get: function(target, name)
+            {
+                if (name in target)
+                    return target[name];
+
+                if (FBTrace.DBG_COMMANDLINE)
+                {
+                    FBTrace.sysout("CommandLineExposed.ConsoleProxy; console."+name+" is undefined"+
+                        ". Attempting to execute window.console."+name+" instead");
+                }
+
+                return win.wrappedJSObject.console[name];
+            },
+            set: function(target, name, value)
+            {
+                if (FBTrace.DBG_COMMANDLINE)
+                {
+                    FBTrace.sysout("CommandLineExposed.ConsoleProxy; modifying console."+name,
+                       value);
+                }
+
+                // set the value directly to window.console:
+                win.wrappedJSObject.console[name] = value;
+
+                // Make sure the user always controls the method of the Console API:
+                if (name in console)
+                    target[name] = value;
+
+                return value;
+            }
+        };
+
+        consoleProxy = new Proxy(console, proxyHandler);
+
+        Dom.setMappedData(win.document, consoleProxyID, consoleProxy);
+        return consoleProxy;
     }
 
-    function createConsoleCopy(console)
+    // per-window singleton that returns a console
+    function getConsole()
     {
-        var copy = {__exposedProps__: Object.create(null)};
+        var consoleID = "commandline-console";
+        var console = Dom.getMappedData(win.document, consoleID);
 
-        for (var i in console.__exposedProps__)
-            copyConsoleMethod(console, copy, i);
+        if (!console)
+        {
+            console = Firebug.ConsoleExposed.createFirebugConsole(context, win);
+            Dom.setMappedData(win.document, consoleID, console);
+        }
 
-        return copy;
+        return console;
     }
 
     // Define command line methods
@@ -126,10 +157,9 @@ function createFirebugCommandLine(context, win)
         commandLine.__exposedProps__[command] = "rw";
     }
 
-    var console = Firebug.ConsoleExposed.createFirebugConsole(context, win);
-
+    var console = getConsole();
     // inject console in _FirebugCommandLine:
-    commandLine.console = createConsoleCopy(console);
+    commandLine.console = getConsoleProxy(console);
     commandLine.__exposedProps__.console = "rw";
 
     // Define shortcuts for some console methods
@@ -234,7 +264,9 @@ function createFirebugCommandLine(context, win)
             // have a line number equal to (line of eval, 1-based) + (line in
             // expression, 0-based) - keep track of the former term so we can
             // correct it later.
-            baseLine = Components.stack.lineNumber; result = contentView.eval(expr);
+            baseLine = Components.stack.lineNumber; 
+
+            result = contentView.eval(expr);
 
             // See Issue 5221
             //var result = FirebugEvaluate(expr, contentView);
