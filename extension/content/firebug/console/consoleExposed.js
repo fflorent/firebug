@@ -266,29 +266,29 @@ function createFirebugConsole(context, win, defaultReturnValue)
     };*/
 
     // Expose only these properties to the content scope (read only).
-    console.__exposedProps__.log = "r";
-    console.__exposedProps__.debug = "r";
-    console.__exposedProps__.info = "r";
-    console.__exposedProps__.warn = "r";
-    console.__exposedProps__.exception = "r";
-    console.__exposedProps__.assert = "r";
-    console.__exposedProps__.dir = "r";
-    console.__exposedProps__.dirxml = "r";
-    console.__exposedProps__.trace = "r";
-    console.__exposedProps__.group = "r";
-    console.__exposedProps__.groupEnd = "r";
-    console.__exposedProps__.groupCollapsed = "r";
-    console.__exposedProps__.time = "r";
-    console.__exposedProps__.timeEnd = "r";
-    console.__exposedProps__.timeStamp = "r";
-    console.__exposedProps__.profile = "r";
-    console.__exposedProps__.profileEnd = "r";
-    console.__exposedProps__.count = "r";
-    console.__exposedProps__.clear = "r";
-    console.__exposedProps__.table = "r";
-    console.__exposedProps__.error = "r";
-    //console.__exposedProps__.memoryProfile = "r";
-    //console.__exposedProps__.memoryProfileEnd = "r";
+    console.__exposedProps__.log = "rw";
+    console.__exposedProps__.debug = "rw";
+    console.__exposedProps__.info = "rw";
+    console.__exposedProps__.warn = "rw";
+    console.__exposedProps__.exception = "rw";
+    console.__exposedProps__.assert = "rw";
+    console.__exposedProps__.dir = "rw";
+    console.__exposedProps__.dirxml = "rw";
+    console.__exposedProps__.trace = "rw";
+    console.__exposedProps__.group = "rw";
+    console.__exposedProps__.groupEnd = "rw";
+    console.__exposedProps__.groupCollapsed = "rw";
+    console.__exposedProps__.time = "rw";
+    console.__exposedProps__.timeEnd = "rw";
+    console.__exposedProps__.timeStamp = "rw";
+    console.__exposedProps__.profile = "rw";
+    console.__exposedProps__.profileEnd = "rw";
+    console.__exposedProps__.count = "rw";
+    console.__exposedProps__.clear = "rw";
+    console.__exposedProps__.table = "rw";
+    console.__exposedProps__.error = "rw";
+    //console.__exposedProps__.memoryProfile = "rw";
+    //console.__exposedProps__.memoryProfileEnd = "rw";
 
     // DBG console.uid = Math.random();
 
