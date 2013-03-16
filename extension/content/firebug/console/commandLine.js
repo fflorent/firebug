@@ -8,29 +8,23 @@ define([
     "firebug/chrome/reps",
     "firebug/lib/locale",
     "firebug/lib/events",
-    "firebug/lib/wrapper",
     "firebug/lib/url",
-    "firebug/lib/css",
     "firebug/lib/dom",
     "firebug/chrome/firefox",
     "firebug/chrome/window",
     "firebug/lib/system",
     "firebug/lib/string",
-    "firebug/lib/xml",
-    "firebug/lib/array",
     "firebug/lib/persist",
-    "firebug/lib/keywords",
     "firebug/console/console",
-    "firebug/console/commandLineHelp",
-    "firebug/console/commandLineInclude",
     "firebug/console/commandLineExposed",
     "firebug/console/closureInspector",
     "firebug/console/autoCompleter",
-    "firebug/console/commandHistory"
+    "firebug/console/commandHistory",
+    "firebug/console/commandLineHelp",
+    "firebug/console/commandLineInclude",
 ],
-function(Obj, Firebug, FirebugReps, Locale, Events, Wrapper, Url, Css, Dom, Firefox, Win, System,
-    Str, Xml, Arr, Persist, Keywords, Console, CommandLineHelp, CommandLineInclude,
-    CommandLineExposed, ClosureInspector) {
+function(Obj, Firebug, FirebugReps, Locale, Events, Url, Dom, Firefox, Win, System, Str, Persist,
+    Console, CommandLineExposed, ClosureInspector) {
 "use strict";
 
 // ********************************************************************************************* //
