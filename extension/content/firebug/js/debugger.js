@@ -2555,24 +2555,6 @@ Firebug.Debugger = Obj.extend(Firebug.ActivableModule,
         if (FBTrace.DBG_ACTIVATION)
             FBTrace.sysout("loadedContext needs to trigger watchpanel updates");
 
-        /*
-        var watchPanel = this.ableWatchSidePanel(context);
-        var needNow = watchPanel && watchPanel.watches;
-        var watchPanelState = Firebug.getPanelState({name: "watches", context: context});
-        var needPersistent = watchPanelState && watchPanelState.watches;
-        if (needNow || needPersistent)
-        {
-            Firebug.CommandLine.isReadyElsePreparing(context);
-            if (watchPanel)
-            {
-                context.setTimeout(function refreshWatchesAfterCommandLineReady()
-                {
-                    watchPanel.refresh();
-                });
-            }
-        }
-        */
-
         if (FBTrace.DBG_SOURCEFILES)
             FBTrace.sysout("debugger("+this.debuggerName+").loadedContext enabled on load: "+
                 context.onLoadWindowContent+" context.sourceFileMap", context.sourceFileMap);
