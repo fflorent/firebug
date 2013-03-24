@@ -62,7 +62,7 @@ function createFirebugCommandLine(context, win)
     }
 
     // the debuggee global:
-    var dglobal = DebuggerLib.getDebuggeeGlobal(context, win);
+    var dglobal = DebuggerLib.getDebuggeeGlobal(context, contentView);
 
     var commandLine = commandLineCache.get(win.document);
     if (commandLine)
@@ -253,7 +253,7 @@ function evaluate(context, win, expr, origExpr, onSuccess, onError)
     var result;
     var contentView = Wrapper.getContentView(win);
     var commandLine = createFirebugCommandLine(context, win);
-    var dglobal = DebuggerLib.getDebuggeeGlobal(context, win);
+    var dglobal = DebuggerLib.getDebuggeeGlobal(context, contentView);
     var resObj;
 
     updateVars(commandLine, dglobal, context);

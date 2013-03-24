@@ -33,6 +33,7 @@ var DebuggerLib = {};
  */
 DebuggerLib.unwrapDebuggeeValue = function(obj, global, dglobal)
 {
+    var res;
     // If not a debuggee object, return it immediately.
     if (typeof obj !== "object" || obj === null)
         return obj;
@@ -40,15 +41,24 @@ DebuggerLib.unwrapDebuggeeValue = function(obj, global, dglobal)
     if (obj.unsafeDereference)
         return obj.unsafeDereference();
 
-    // Define a new property to get the debuggee value.
-    dglobal.defineProperty("_firebugUnwrappedDebuggerObject", {
-        value: obj,
-        writable: true,
-        configurable: true
-    });
+    try
+    {
+        // Define a new property to get the debuggee value.
+        dglobal.defineProperty("_firebugUnwrappedDebuggerObject", {
+            value: obj,
+            writable: true,
+            configurable: true
+        });
 
-    // Get the debuggee value using the property through the unwrapped global object.
-    return global._firebugUnwrappedDebuggerObject;
+        // Get the debuggee value using the property through the unwrapped global object.
+        res = global._firebugUnwrappedDebuggerObject;
+    }
+    finally
+    {
+        if (global._firebugUnwrappedDebuggerObject !== undefined)
+            delete global._firebugUnwrappedDebuggerObject;
+    }
+    return res;
 };
 
 /**
