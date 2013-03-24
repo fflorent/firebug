@@ -18,13 +18,14 @@ define([
     "firebug/console/console",
     "firebug/console/commandLineExposed",
     "firebug/console/closureInspector",
+    "firebug/console/commandLineAPI",
     "firebug/console/autoCompleter",
     "firebug/console/commandHistory",
     "firebug/console/commandLineHelp",
     "firebug/console/commandLineInclude",
 ],
 function(Obj, Firebug, FirebugReps, Locale, Events, Url, Dom, Firefox, Win, System, Str, Persist,
-    Console, CommandLineExposed, ClosureInspector) {
+    Console, CommandLineExposed, ClosureInspector, CommandLineAPI) {
 "use strict";
 
 // ********************************************************************************************* //
@@ -151,7 +152,7 @@ Firebug.CommandLine = Obj.extend(Firebug.Module,
         var result = null;
 
         if (!context.commandLineAPI)
-            context.commandLineAPI = new FirebugCommandLineAPI(context);
+            context.commandLineAPI = CommandLineAPI.getCommandLineAPI(context);
 
         var htmlPanel = context.getPanel("html", true);
         var scope = {
