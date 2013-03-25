@@ -1,8 +1,13 @@
 /* See license.txt for terms of usage */
 
+/*jshint esnext:true, es5:true, curly:false*/
+/*global FBTrace:true, Components:true, define:true */
+
+
 define([
+    "firebug/lib/wrapper",
 ],
-function() {
+function(Wrapper) {
 
 "use strict";
 
@@ -70,9 +75,15 @@ DebuggerLib.getDebuggeeGlobal = function(context, global)
         if (!dbg)
             return;
 
-        dglobal = dbg.addDebuggee(global);
-        dbg.removeDebuggee(global);
+        // xxxFlorent: for a reason I ignore, we have to unwrap `global` to make sure we can
+        //      run that test case twice (page reload between the 2 runs): commandLine/api/cd.html
+        var contentView = Wrapper.getContentView(global);
+        dglobal = dbg.addDebuggee(contentView);
+        dbg.removeDebuggee(contentView);
         dglobalWeakMap.set(global.document, dglobal);
+
+        if (FBTrace.DBG_DEBUGGER)
+            FBTrace.sysout("new debuggee global instance created", dglobal);
     }
     return dglobal;
 };
