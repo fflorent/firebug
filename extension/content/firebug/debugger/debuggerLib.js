@@ -75,8 +75,8 @@ DebuggerLib.getDebuggeeGlobal = function(context, global)
         if (!dbg)
             return;
 
-        // xxxFlorent: for a reason I ignore, we have to unwrap `global` to make sure we can
-        //      run that test case twice (page reload between the 2 runs): commandLine/api/cd.html
+        // xxxFlorent: For a reason I ignore, there are some conflicts with the ShareMeNot addon.
+        //   TODO see what cause that behaviour, why, and if there are no other addons in that case.
         var contentView = Wrapper.getContentView(global);
         dglobal = dbg.addDebuggee(contentView);
         dbg.removeDebuggee(contentView);
