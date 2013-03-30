@@ -14,9 +14,10 @@ define([
     "firebug/chrome/menu",
     "firebug/debugger/stack/stackFrameRep",
     "firebug/debugger/stack/stackTrace",
+    "firebug/lib/options",
 ],
 function(Obj, Firebug, FBTrace, FirebugReps, Events, Wrapper, StackFrame, Css, Arr, Dom, Menu,
-    StackFrameRep, StackTrace) {
+    StackFrameRep, StackTrace, Options) {
 
 // ********************************************************************************************* //
 // Constants
@@ -209,6 +210,10 @@ CallstackPanel.prototype = Obj.extend(Firebug.Panel,
 
         Css.setClass(this.panelNode, "objectBox-stackTrace");
 
+        // Update visibility of stack frame arguments.
+        var name = "showStackFrameArguments";
+        this.updateOption(name, Options.get(name));
+ 
         if (trace && trace.frames.length != 0)
         {
             var rep = Firebug.getRep(trace, this.context);
@@ -253,11 +258,17 @@ CallstackPanel.prototype = Obj.extend(Firebug.Panel,
 
     getOptionsMenuItems: function()
     {
+        var items = [];
+
         // an option handled by chrome.js
-        var items = [
-            Menu.optionMenu("OmitObjectPathStack", "omitObjectPathStack",
-                "callstack.option.tip.Omit_Object_Path_Stack"),
-        ];
+        items.push(Menu.optionMenu("OmitObjectPathStack",
+            "omitObjectPathStack",
+            "callstack.option.tip.Omit_Object_Path_Stack"));
+
+        // Show/hide stack frame arguments.
+        items.push(Menu.optionMenu("callstack.option.Show_Arguments",
+            "showStackFrameArguments",
+            "callstack.option.tip.Show_Arguments"));
 
         return items;
     },
@@ -289,6 +300,17 @@ CallstackPanel.prototype = Obj.extend(Firebug.Panel,
         var elements = this.panelNode.querySelectorAll(".objectBox-stackFrame");
         for (var i=0; i<elements.length; i++)
             StackFrameRep.collapseArguments(elements[i]);
+    },
+
+    updateOption: function(name, value)
+    {
+        if (name == "showStackFrameArguments")
+        {
+            if (value)
+                Css.removeClass(this.panelNode, "hideArguments");
+            else
+                Css.setClass(this.panelNode, "hideArguments");
+        }
     },
 });
 

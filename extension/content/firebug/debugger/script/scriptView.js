@@ -31,6 +31,8 @@ Cu["import"]("resource:///modules/source-editor.jsm");
 var Trace = FBTrace.to("DBG_SCRIPTVIEW");
 var TraceError = FBTrace.to("DBG_ERRORS");
 
+var annonTypeHighlightedLine = "firefox.annotation.highlightedLine";
+
 // ********************************************************************************************* //
 // Source View
 
@@ -62,7 +64,10 @@ ScriptView.prototype = Obj.extend(new Firebug.EventSource(),
     initialize: function(parentNode)
     {
         if (this.initializeExecuted)
+        {
+            this.showSource();
             return;
+        }
 
         this.initializeExecuted = true;
 
@@ -106,6 +111,11 @@ ScriptView.prototype = Obj.extend(new Firebug.EventSource(),
         this.editor.addEventListener(SourceEditor.EVENTS.MOUSE_OUT,
             this.onMouseOutListener);
 
+        // Register custom annotation type
+        this.editor._annotationRuler.addAnnotationType(annonTypeHighlightedLine);
+        this.editor._overviewRuler.addAnnotationType(annonTypeHighlightedLine);
+        this.editor._annotationStyler.addAnnotationType(annonTypeHighlightedLine);
+
         // Hook annotation and lines ruler clicks
         this.editor._annotationRuler.onClick = this.annotationRulerClick.bind(this);
         this.editor._linesRuler.onClick = this.linesRulerClick.bind(this);
@@ -120,7 +130,7 @@ ScriptView.prototype = Obj.extend(new Firebug.EventSource(),
             this.showSource(this.defaultSource);
 
         if (this.defaultLine > 0)
-            this.scrollToLineAsync(this.defaultLine);
+            this.scrollToLineAsync(this.defaultLine, this.defaultOptions);
 
         this.initBreakpoints();
     },
@@ -152,8 +162,6 @@ ScriptView.prototype = Obj.extend(new Firebug.EventSource(),
 
     showSource: function(source)
     {
-        Trace.sysout("scriptView.showSource; initialized: " + this.initialized, source);
-
         if (!this.initialized)
         {
             this.defaultSource = source;
@@ -161,13 +169,15 @@ ScriptView.prototype = Obj.extend(new Firebug.EventSource(),
         }
 
         var text = this.editor.getText();
-        if (text == source)
+        if (text == source && !this.forceRefresh)
             return;
 
         this.editor.setText(source);
 
         // Breakpoints and annotations in general must be set again after setText.
         this.initBreakpoints();
+
+        this.forceRefresh = false;
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -283,7 +293,14 @@ ScriptView.prototype = Obj.extend(new Firebug.EventSource(),
         this.dispatch("getBreakpoints", [bps]);
 
         for (var i=0; i<bps.length; i++)
-            this.addBreakpoint(bps[i]);
+        {
+            var bp = bps[i];
+
+            // Only standard breakpoints are displayed as red circles
+            // in the breakpoint column.
+            if (bp.isNormal())
+                this.addBreakpoint(bp);
+        }
     },
 
     onBreakpointChange: function(event)
@@ -325,6 +342,9 @@ ScriptView.prototype = Obj.extend(new Firebug.EventSource(),
 
     removeBreakpoint: function(bp)
     {
+        if (!this.editor)
+            return;
+
         var self = this;
         this.safeSkipEditorBreakpointChange(function()
         {
@@ -334,6 +354,12 @@ ScriptView.prototype = Obj.extend(new Firebug.EventSource(),
 
     addBreakpoint: function(bp)
     {
+        if (!this.editor)
+            return;
+
+        if (!bp.isNormal())
+            return;
+
         var self = this;
         this.safeSkipEditorBreakpointChange(function()
         {
@@ -346,10 +372,13 @@ ScriptView.prototype = Obj.extend(new Firebug.EventSource(),
 
     toggleBreakpoint: function(lineIndex)
     {
+        if (!this.editor)
+            return;
+
         var lineStart = this.editor.getLineStart(lineIndex);
         var lineEnd = this.editor.getLineEnd(lineIndex);
         var annotations = this.editor._getAnnotationsByType("breakpoint", lineStart, lineEnd);
-        
+
         if (annotations.length > 0)
         {
             this.editor.removeBreakpoint(lineIndex);
@@ -374,9 +403,27 @@ ScriptView.prototype = Obj.extend(new Firebug.EventSource(),
             rangeStyle: {styleClass: "annotationRange"}
         };
 
-        this.editor._annotationModel.addAnnotation(annotation);
+        var annotations = this.editor._getAnnotationsByType("breakpoint", lineStart, lineEnd);
 
-        this.dispatch("onBreakpointInitialized", [lineIndex, condition]);
+        if (annotations.length == 0)
+        {
+            this.editor._annotationModel.addAnnotation(annotation);
+        }
+        else
+        {
+            // If the user wanted to set a condition on a existed bp
+            // it's no need to show loading icon and wait to receive
+            // the response.
+            this.dispatch("startEditingCondition", [lineIndex, condition]);
+            return;
+        }
+
+        // Simulate editor event sent when the user creates a breakpoint by
+        // clicking on the breakpoint ruler.
+        this.onBreakpointChange({
+            added:[{lineNo: lineIndex, condition: condition}],
+            removed:[]
+        });
     },
 
     updateBreakpoint: function(bp)
@@ -422,6 +469,7 @@ ScriptView.prototype = Obj.extend(new Firebug.EventSource(),
         if (!this.initialized)
         {
             this.defaultLine = lineNo;
+            this.defaultOptions = options;
             return;
         }
 
@@ -474,6 +522,53 @@ ScriptView.prototype = Obj.extend(new Firebug.EventSource(),
 
         if (options.debugLocation)
             this.editor.setDebugLocation(line);
+        else if (options.highlight)
+            this.highlightLine(line);
+    },
+
+    highlightLine: function(lineIndex)
+    {
+        Trace.sysout("scriptView.highlightLine; " + lineIndex);
+
+        if (!this.editor)
+            return;
+
+        var annotations = this.getAnnotationsByType(annonTypeHighlightedLine, 0,
+            this.editor.getCharCount());
+
+        if (annotations.length > 0)
+        {
+            annotations.forEach(this.editor._annotationModel.removeAnnotation,
+                this.editor._annotationModel);
+        }
+
+        if (lineIndex < 0)
+            return;
+
+        var lineStart = this.editor._model.getLineStart(lineIndex);
+        var lineEnd = this.editor._model.getLineEnd(lineIndex);
+        var lineText = this.editor._model.getLine(lineIndex);
+
+        var annotation = {
+            type: annonTypeHighlightedLine,
+            start: lineStart,
+            end: lineEnd,
+            title: "",
+            style: {styleClass: "annotation highlightedLine"},
+            html: "<div class='annotationHTML highlightedLine'></div>",
+            overviewStyle: {styleClass: "annotationOverview highlightedLine"},
+            rangeStyle: {styleClass: "annotationRange highlightedLine"},
+            lineStyle: {styleClass: "annotationLine highlightedLine"},
+        };
+
+        this.editor._annotationModel.addAnnotation(annotation);
+
+        // Unhighlight after timeout.
+        var self = this;
+        setTimeout(function()
+        {
+            self.highlightLine(-1);
+        }, 1300);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -547,14 +642,16 @@ ScriptView.prototype = Obj.extend(new Firebug.EventSource(),
     {
         Trace.sysout("scriptView.linesRulerClick; " + lineIndex, event);
 
-        this.toggleBreakpoint(lineIndex);
+        if (lineIndex || lineIndex == 0)
+            this.toggleBreakpoint(lineIndex);
     },
 
     annotationRulerClick: function(lineIndex, event)
     {
         Trace.sysout("scriptView.annotationRulerClick; " + lineIndex, event);
 
-        this.toggleBreakpoint(lineIndex);
+        if (lineIndex || lineIndex == 0)
+            this.toggleBreakpoint(lineIndex);
     },
 
     bodyMouseUp: function(event)
@@ -635,6 +732,18 @@ ScriptView.prototype = Obj.extend(new Firebug.EventSource(),
         }
 
         return null;
+    },
+
+    getAnnotationsByType: function(aType, aStart, aEnd)
+    {
+        var annotations = this.editor._annotationModel.getAnnotations(aStart, aEnd);
+        var annotation, result = [];
+        while (annotation = annotations.next())
+        {
+            if (annotation.type == aType)
+                result.push(annotation);
+        }
+        return result;
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

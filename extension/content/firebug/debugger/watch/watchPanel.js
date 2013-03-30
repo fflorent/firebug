@@ -164,40 +164,35 @@ WatchPanel.prototype = Obj.extend(BasePanel,
     {
         Trace.sysout("WatchPanel.doUpdateSelection; frame: " + frame, frame);
 
-        Events.dispatch(this.fbListeners, "onBeforeDomUpdateSelection", [this]);
+        // Ignore non-frame objects. When the debugger is resumed, properties of the current
+        // global (usually a window) are displayed in showEmptyMembers() method.
+        if (!(frame instanceof StackFrame))
+            return;
 
-        var cache = this.context.clientCache;
+        Events.dispatch(this.fbListeners, "onBeforeDomUpdateSelection", [this]);
 
         var newFrame = frame && ("signature" in frame) &&
             (frame.signature() != this.frameSignature);
 
         if (newFrame)
-        {
             this.frameSignature = frame.signature();
-        }
 
-        var object = frame;
         var input = {
-            object: object,
+            object: frame,
             domPanel: this,
             watchNewRow: true,
         };
 
-        if (object instanceof StackFrame)
-            this.tree.provider = this.provider;
-
+        this.tree.provider = this.provider;
         this.tree.replace(this.panelNode, input);
-        this.tree.restoreState(input.object, this.toggles);
+        this.tree.restoreState(input, this.toggles);
 
         // Throw out the old state object.
         this.toggles = new ToggleBranch.ToggleBranch();
 
         // Pre-expand the first top scope.
-        if (object instanceof StackFrame)
-        {
-            var scope = this.tree.provider.getTopScope(object);
-            this.tree.expandObject(scope);
-        }
+        var scope = this.tree.provider.getTopScope(frame);
+        this.tree.expandObject(scope);
 
         // Asynchronously eval all user-expressions, but make sure it isn't
         // already in-progress (to avoid infinite recursion).
@@ -225,6 +220,8 @@ WatchPanel.prototype = Obj.extend(BasePanel,
 
     showEmptyMembers: function()
     {
+        Trace.sysout("watchPanel.showEmptyMembers;");
+
         var input = {
             domPanel: this,
             object: this.context.getGlobalScope(),
@@ -623,6 +620,14 @@ WatchPanel.prototype = Obj.extend(BasePanel,
             this.editor = new WatchEditor(this.document);
 
         return this.editor;
+    },
+
+    setPropertyValue: function(row, value)
+    {
+        // Save state of the tree before evaluation will cause rebuild.
+        this.tree.saveState(this.toggles);
+
+        BasePanel.setPropertyValue.apply(this, arguments);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -14,6 +14,7 @@ define([
     "firebug/lib/options",
     "firebug/lib/url",
     "firebug/debugger/script/sourceLink",
+    "firebug/debugger/script/sourceFile",
     "firebug/debugger/stack/stackFrame",
     "firebug/debugger/stack/stackTrace",
     "firebug/lib/css",
@@ -30,8 +31,8 @@ define([
     "arch/compilationunit",
 ],
 function(Obj, Arr, Firebug, Domplate, Firefox, Xpcom, Locale, HTMLLib, Events, Wrapper, Options,
-    Url, SourceLink, StackFrame, StackTrace, Css, Dom, Win, System, Xpath, Str, Xml, ToggleBranch,
-    EventMonitor, ClosureInspector, Menu, CompilationUnit) {
+    Url, SourceLink, SourceFile, StackFrame, StackTrace, Css, Dom, Win, System, Xpath, Str, Xml,
+    ToggleBranch, EventMonitor, ClosureInspector, Menu, CompilationUnit) {
 
 with (Domplate) {
 
@@ -207,18 +208,25 @@ FirebugReps.Warning = domplate(Firebug.Rep,
 
 FirebugReps.Func = domplate(Firebug.Rep,
 {
+    className: "function",
+
     tag:
         OBJECTLINK("$object|summarizeFunction"),
 
     summarizeFunction: function(fn)
     {
         var fnText = Str.safeToString(fn);
-        var namedFn = /^function ([^(]+\([^)]*\)) \{/.exec(fnText);
+
+        // Get function name.
+        var namedFn = /^function ([^(]+\([^)]*\))/.exec(fnText);
         var anonFn  = /^function \(/.test(fnText);
         var displayName = fn.displayName;
 
-        return namedFn ? namedFn[1] : (displayName ? displayName + "()" :
+        var result = namedFn ? namedFn[1] : (displayName ? displayName + "()" :
             (anonFn ? "function()" : fnText));
+
+        //xxxHonza: should we use an existing pref?
+        return Str.cropString(result, 100);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -239,8 +247,6 @@ FirebugReps.Func = domplate(Firebug.Rep,
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-    className: "function",
-
     supportsObject: function(object, type)
     {
         return type == "function";
@@ -257,11 +263,11 @@ FirebugReps.Func = domplate(Firebug.Rep,
 
     getTooltip: function(fn, context)
     {
-        var script = Firebug.SourceFile.findScriptForFunctionInContext(context, fn);
+        var script = SourceFile.findScriptForFunctionInContext(context, fn);
         if (script)
         {
-            return Locale.$STRF("Line", [Url.normalizeURL(script.fileName),
-                script.baseLineNumber]);
+            return Locale.$STRF("Line", [Url.normalizeURL(script.url),
+                script.startLine]);
         }
         else
         {
@@ -279,11 +285,11 @@ FirebugReps.Func = domplate(Firebug.Rep,
     getContextMenuItems: function(fn, target, context, script)
     {
         if (!script)
-            script = Firebug.SourceFile.findScriptForFunctionInContext(context, fn);
+            script = SourceFile.findScriptForFunctionInContext(context, fn);
         if (!script)
             return;
 
-        var scriptInfo = Firebug.SourceFile.getSourceFileAndLineByScript(context, script);
+        //var scriptInfo = Firebug.SourceFile.getSourceFileAndLineByScript(context, script);
         var monitored = false; // xxxHonza: FBS doesn't exist scriptInfo ? FBS.fbs.isMonitored(scriptInfo.sourceFile.href,
             //scriptInfo.lineNo) : false;
 

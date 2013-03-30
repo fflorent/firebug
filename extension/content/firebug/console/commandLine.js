@@ -18,13 +18,14 @@ define([
     "firebug/console/console",
     "firebug/console/commandLineExposed",
     "firebug/console/closureInspector",
+    "firebug/console/commandLineAPI",
     "firebug/console/autoCompleter",
     "firebug/console/commandHistory",
     "firebug/console/commandLineHelp",
     "firebug/console/commandLineInclude",
 ],
 function(Obj, Firebug, FirebugReps, Locale, Events, Url, Dom, Firefox, Win, System, Str, Persist,
-    Console, CommandLineExposed, ClosureInspector) {
+    Console, CommandLineExposed, ClosureInspector, CommandLineAPI) {
 "use strict";
 
 // ********************************************************************************************* //
@@ -42,25 +43,6 @@ Firebug.CommandLine = Obj.extend(Firebug.Module,
     dispatchName: "commandLine",
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-    // targetWindow was needed by evaluateInSandbox, let's leave it for a while in case
-    // we rethink this yet again
-    initializeCommandLineIfNeeded: function (context, win)
-    {
-        if (!context || !win)
-            return;
-
-        // The command-line requires that the console has been initialized first,
-        // so make sure that's so.  This call should have no effect if the console
-        // is already initialized.
-        var consoleIsReady = Firebug.Console.isReadyElsePreparing(context, win);
-
-        if (FBTrace.DBG_COMMANDLINE)
-        {
-            FBTrace.sysout("commandLine.initializeCommandLineIfNeeded console ready: " +
-                consoleIsReady);
-        }
-    },
 
     evaluate: function(expr, context, thisValue, targetWindow, successConsoleFunction,
         exceptionFunction, noStateChange)
@@ -156,7 +138,7 @@ Firebug.CommandLine = Obj.extend(Firebug.Module,
         Firebug.Console.injector.attachIfNeeded(context, win);
 
         origExpr = origExpr || expr;
-        var ret = CommandLineExposed.evaluate(context, expr, origExpr, onSuccess, onError);
+        var ret = CommandLineExposed.evaluate(context, win, expr, origExpr, onSuccess, onError);
 
         if (FBTrace.DBG_COMMANDLINE)
         {
@@ -170,7 +152,7 @@ Firebug.CommandLine = Obj.extend(Firebug.Module,
         var result = null;
 
         if (!context.commandLineAPI)
-            context.commandLineAPI = new FirebugCommandLineAPI(context);
+            context.commandLineAPI = CommandLineAPI.getCommandLineAPI(context);
 
         var htmlPanel = context.getPanel("html", true);
         var scope = {
@@ -191,62 +173,6 @@ Firebug.CommandLine = Obj.extend(Firebug.Module,
         }
 
         return result;
-    },
-
-    evaluateByPostMessage: function(expr, context, thisValue, targetWindow,
-        successConsoleFunction, exceptionFunction)
-    {
-        var win = targetWindow || context.getCurrentGlobal();
-
-        if (!win)
-        {
-            if (FBTrace.DBG_ERRORS && FBTrace.DBG_COMMANDLINE)
-                FBTrace.sysout("commandLine.evaluateByPostMessage: no targetWindow!");
-            return;
-        }
-
-        // We're going to use some command-line facilities, but it may not have initialized yet.
-        this.initializeCommandLineIfNeeded(context, win);
-
-        expr = expr.toString();
-
-        var consoleHandler = Firebug.Console.injector.getConsoleHandler(context, win);
-
-        if (!consoleHandler)
-        {
-            FBTrace.sysout("commandLine evaluateByPostMessage no consoleHandler "+
-                Win.safeGetWindowLocation(win));
-            return;
-        }
-
-        if (successConsoleFunction)
-        {
-            consoleHandler.setEvaluatedCallback( function useConsoleFunction(result)
-            {
-                var ignoreReturnValue = Console.getDefaultReturnValue(win);
-                if (result === ignoreReturnValue)
-                    return;
-
-                successConsoleFunction(result, context);
-            });
-        }
-
-        if (exceptionFunction)
-        {
-            consoleHandler.evaluateError = function useExceptionFunction(result)
-            {
-                exceptionFunction(result, context, "errorMessage");
-            };
-        }
-        else
-        {
-            consoleHandler.evaluateError = function useErrorFunction(result)
-            {
-                Firebug.Console.logFormatted([result], context, "error", true);
-            };
-        }
-
-        return win.postMessage(expr, "*");
     },
 
     evaluateInWebPage: function(expr, context, targetWindow)

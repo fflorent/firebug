@@ -26,7 +26,7 @@ var commandLineCache = new WeakMap();
 // Command Line APIs
 
 // List of command line APIs
-var commands = ["$", "$$", "$x", "$n", "cd", "clear", "inspect", "keys",
+var commandNames = ["$", "$$", "$x", "$n", "cd", "clear", "inspect", "keys",
     "values", "debug", "undebug", "monitor", "unmonitor", "traceCalls", "untraceCalls",
     "traceAll", "untraceAll", "copy" /*, "memoryProfile", "memoryProfileEnd"*/];
 
@@ -61,32 +61,37 @@ function createFirebugCommandLine(context, win)
         return null;
     }
 
+    // the debuggee global:
+    var dglobal = DebuggerLib.getDebuggeeGlobal(context, win);
+
     var commandLine = commandLineCache.get(win.document);
     if (commandLine)
-        return commandLine;
-
-    // the debuggee global:
-    var dglobal = DebuggerLib.getDebuggeeGlobal(win, context);
+        return copyCommandLine(commandLine, dglobal);
 
     // The commandLine object
-
-    // xxxFlorent: FIXME we need to create a debuggee object to send to evalInGlobalWithBindings,
-    // but that also exposes the methods of debuggee objects (pauseGrip, etc.)
     commandLine = dglobal.makeDebuggeeValue(Object.create(null));
 
-    // Get the console Object
-    var defaultReturnValue = Firebug.Console.getDefaultReturnValue(win);
-    var console = Firebug.ConsoleExposed.createFirebugConsole(context, win, defaultReturnValue);
-
+    var console = Firebug.ConsoleExposed.createFirebugConsole(context, win);
     // The command line API instance:
-    var commands = CommandLineAPI.getCommandLineAPI(context, console);
+    var commands = CommandLineAPI.getCommandLineAPI(context);
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     // Exposed Properties
 
     function createCommandHandler(command)
     {
-        return dglobal.makeDebuggeeValue(command);
+        var wrappedCommand = function()
+        {
+            try
+            {
+                return command.apply(null, arguments);
+            }
+            catch(ex)
+            {
+                throw new Error(ex.message, ex.fileName, ex.lineNumber);
+            }
+        };
+        return dglobal.makeDebuggeeValue(wrappedCommand);
     }
 
     function createVariableHandler(handler)
@@ -94,7 +99,14 @@ function createFirebugCommandLine(context, win)
         var object = dglobal.makeDebuggeeValue({});
         object.handle = function()
         {
-            return handler(context);
+            try
+            {
+                return handler(context);
+            }
+            catch(ex)
+            {
+                throw new Error(ex.message, ex.fileName, ex.lineNumber);
+            }
         };
         return object;
     }
@@ -118,13 +130,12 @@ function createFirebugCommandLine(context, win)
                 }
             }
         };
-    }
+    };
 
-    var command;
     // Define command line methods
     for (var commandName in commands)
     {
-        command = commands[commandName];
+        var command = commands[commandName];
         commandLine[commandName] = createCommandHandler(command);
     }
 
@@ -139,34 +150,44 @@ function createFirebugCommandLine(context, win)
     for (var name in userCommands)
     {
         var config = userCommands[name];
-        command = createUserCommandHandler(config, name);
+        var command = createUserCommandHandler(config, name);
         if (userCommands[name].getter)
             commandLine[name] = createVariableHandler(command);
         else
             commandLine[name] = createCommandHandler(command);
     }
 
-    // Register Console API (Firebug-side)
-    commandLine.console = dglobal.makeDebuggeeValue(console);
-
     commandLineCache.set(win.document, commandLine);
 
-    return commandLine;
+    // return a copy so the original one is preserved from changes
+    return copyCommandLine(commandLine, dglobal);
 }
 
-function findLineNumberInExceptionStack(strStack)
+function copyCommandLine(commandLine, dglobal)
 {
-    if (typeof strStack !== "string")
-        return null;
-    var stack = strStack.split("\n");
-    var fileName = Components.stack.filename, re = /^.*@(.*):(.*)$/;
-    for (var i = 0; i < stack.length; ++i)
-    {
-        var m = re.exec(stack[i]);
-        if (m && m[1] === fileName)
-            return +m[2];
-    }
-    return null;
+    var copy = dglobal.makeDebuggeeValue(Object.create(null));
+    for (var name in commandLine)
+        copy[name] = commandLine[name];
+    return copy;
+}
+
+function findLineNumberInExceptionStack(splitStack)
+{
+    var m = splitStack[0].match(/:(\d+)$/);
+    return m !== null ? +m[1] : null;
+}
+
+function correctStackTrace(splitStack)
+{
+    var filename = Components.stack.filename;
+    // remove the frames over the evaluated expression
+    for (var i = 0; i < splitStack.length-1 &&
+        splitStack[i+1].indexOf(evaluate.name + "@" + filename, 0) === -1 ; i++);
+
+    if (i >= splitStack.length)
+        return false;
+    splitStack.splice(0, i);
+    return true;
 }
 
 // ********************************************************************************************* //
@@ -174,7 +195,7 @@ function findLineNumberInExceptionStack(strStack)
 
 function registerCommand(name, config)
 {
-    if (commands[name] || consoleShortcuts[name] || props[name] || userCommands[name])
+    if (commandNames[name] || consoleShortcuts[name] || props[name] || userCommands[name])
     {
         if (FBTrace.DBG_ERRORS)
         {
@@ -222,18 +243,17 @@ function removeConflictingNames(commandLine, context, contentView)
 {
     for (var name in commandLine)
     {
-        if (contentView.hasOwnProperty(name) && name !== "console")
+        if (contentView.hasOwnProperty(name))
             delete commandLine[name];
     }
 }
 
-function evaluate(context, expr, origExpr, onSuccess, onError)
+function evaluate(context, win, expr, origExpr, onSuccess, onError)
 {
     var result;
-    var win = context.window;
     var contentView = Wrapper.getContentView(win);
     var commandLine = createFirebugCommandLine(context, win);
-    var dglobal = DebuggerLib.getDebuggeeGlobal(context.window, context);
+    var dglobal = DebuggerLib.getDebuggeeGlobal(context, win);
     var resObj;
 
     updateVars(commandLine, dglobal, context);
@@ -273,29 +293,60 @@ function evaluate(context, expr, origExpr, onSuccess, onError)
         // create new error since properties of nsIXPCException are not modifiable.
         // Example of code raising nsIXPCException: `alert()` (without arguments)
 
-        // xxxFlorent: FIXME: the lineNumber is wrong with that example: cd("foo")
+        // xxxFlorent: FIXME: we can't get the right stack trace with this example:
+        //     function a(){
+        //          throw new Error("error");
+        //     }
+        //     <ENTER>
+        //     a();
+        //     <ENTER>
         var exc = unwrap(resObj.throw);
 
-        if (!exc || typeof exc === "string")
+        if (exc === null || exc === undefined)
             return;
 
+        // xxxFlorent: FIXME (?): the line number and the stacktrace are wrong in that case
+        if (typeof exc !== "object")
+            exc = {message: exc};
+
         var shouldModify = false, isXPCException = false;
-        var fileName = exc.filename || exc.fileName;
+        var fileName = exc.filename || exc.fileName || "";
+        var isInternalError = fileName.lastIndexOf("chrome://", 0) === 0;
         var lineNumber = null;
+        var stack = null;
+        var splitStack;
         var isFileNameMasked = (fileName === "debugger eval code");
-        if (fileName.lastIndexOf("chrome:", 0) === 0 || isFileNameMasked)
+        if (isInternalError || isFileNameMasked)
         {
-            if (fileName === Components.stack.filename || isFileNameMasked)
+            shouldModify = true;
+            isXPCException = (exc.filename !== undefined);
+
+            // Lie and show the pre-transformed expression instead.
+            // xxxFlorent: needs to discuss about keeping that + localize?
+            // xxxFlorent: FIXME the link to the source should open a new window
+            fileName = "data:,/* EXPRESSION EVALUATED USING THE FIREBUG COMMAND LINE: */"+
+                encodeURIComponent("\n"+origExpr);
+
+            if (isInternalError && typeof exc.stack === "string")
             {
-                shouldModify = true;
-                if (exc.filename)
-                    isXPCException = true;
-                lineNumber = exc.lineNumber;
+                splitStack = exc.stack.split("\n");
+                var correctionSucceeded = correctStackTrace(splitStack);
+                if (correctionSucceeded)
+                {
+                    // correct the line number so we take into account the comment prepended above
+                    lineNumber = findLineNumberInExceptionStack(splitStack) + 1;
+
+                    // correct the first trace
+                    splitStack.splice(0, 1, "@" + fileName + ":" + lineNumber);
+                    stack = splitStack.join("\n");
+                }
+                else
+                    shouldModify = false;
             }
-            else if (exc._dropFrames)
+            else
             {
-                lineNumber = findLineNumberInExceptionStack(exc.stack);
-                shouldModify = (lineNumber !== null);
+                // correct the line number so we take into account the comment prepended above
+                lineNumber = exc.lineNumber + 1;
             }
         }
 
@@ -303,16 +354,11 @@ function evaluate(context, expr, origExpr, onSuccess, onError)
 
         if (shouldModify)
         {
-            result.stack = null;
-            result.source = expr;
+            result.stack = stack;
+            result.source = origExpr;
             result.message = exc.message;
-            result.lineNumber = lineNumber + 1;
-
-            // Lie and show the pre-transformed expression instead.
-            // xxxFlorent: needs to discuss about keeping that + localize?
-            // xxxFlorent: FIXME the link to the source should open a new window
-            result.fileName = "data:,/* EXPRESSION EVALUATED USING THE FIREBUG COMMAND LINE: */"+
-                encodeURIComponent("\n"+origExpr);
+            result.lineNumber = lineNumber;
+            result.fileName = fileName;
 
             // The error message can also contain post-transform details about the
             // source, but it's harder to lie about. Make it prettier, at least.
@@ -324,15 +370,19 @@ function evaluate(context, expr, origExpr, onSuccess, onError)
         }
         else
         {
-            for (var prop in result)
+            Obj.getPropertyNames(exc).forEach(function(prop)
+            {
                 result[prop] = exc[prop];
+            });
+            result.stack = exc.stack;
+            result.source = exc.source;
         }
 
-        onError(result);
+        onError(result, context);
         return result;
     }
 
-    onSuccess(result);
+    onSuccess(result, context);
     return result;
 }
 
@@ -342,7 +392,7 @@ function evaluate(context, expr, origExpr, onSuccess, onError)
 Firebug.CommandLineExposed =
 {
     createFirebugCommandLine: createFirebugCommandLine,
-    commands: commands,
+    commands: commandNames,
     consoleShortcuts: consoleShortcuts,
     properties: props,
     userCommands: userCommands,

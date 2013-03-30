@@ -64,8 +64,7 @@ Firebug.Console.injector =
     attachConsoleInjector: function(context, win)
     {
         // Get the 'console' object (this comes from chrome scope).
-        // console's methods return undefined by default.
-        var console = Firebug.ConsoleExposed.createFirebugConsole(context, win, undefined);
+        var console = Firebug.ConsoleExposed.createFirebugConsole(context, win);
 
         // Do not expose the chrome object as is but, rather do a wrapper, see below.
         //win.wrappedJSObject.console = console;
@@ -184,8 +183,7 @@ var total_handlers = 0;
 function createConsoleHandler(context, win)
 {
     var handler = {};
-    // console's methods return undefined by default.
-    handler.console = Firebug.ConsoleExposed.createFirebugConsole(context, win, undefined);
+    handler.console = Firebug.ConsoleExposed.createFirebugConsole(context, win);
 
     // xxxHonza: these two functions should be automatically overridden, check this out
     // can be probably removed (evaluated and evaluateError).

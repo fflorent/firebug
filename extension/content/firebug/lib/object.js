@@ -230,6 +230,30 @@ Obj.isNonNativeGetter = function(obj, propName)
     return true;
 };
 
+// xxxFlorent: [ES6-getPropertyNames]
+// http://wiki.ecmascript.org/doku.php?id=harmony:extended_object_api&s=getownpropertynames
+/**
+ * Gets property names from an object.
+ *
+ * @param {*} subject The object
+ * @return {Array} The property names
+ *
+ */
+Obj.getPropertyNames = Object.getPropertyNames || function(subject)
+{
+    var props = Object.getOwnPropertyNames(subject);
+    var proto = Object.getPrototypeOf(subject);
+    while (proto !== null)
+    {
+        props = props.concat(Object.getOwnPropertyNames(proto));
+        proto = Object.getPrototypeOf(proto);
+    }
+    // only keep unique elements from props (not optimised):
+    //    props = [...new Set(props)];
+    return Arr.unique(props);
+};
+
+
 // ********************************************************************************************* //
 
 return Obj;

@@ -25,7 +25,7 @@ function(FirebugReps, Locale, Wrapper, Url, Str, StackFrame, StackTrace,
  * @param {Object} context
  * @param {Object} win
  */
-function createFirebugConsole(context, win, defaultReturnValue)
+function createFirebugConsole(context, win)
 {
     // Defined as a chrome object, but exposed into the web content scope.
     var console = {
@@ -70,13 +70,13 @@ function createFirebugConsole(context, win, defaultReturnValue)
             return logAssert("assert", rest);
         }
 
-        return defaultReturnValue;
+        return Console.getDefaultReturnValue(win);
     };
 
     console.dir = function dir(o)
     {
         Firebug.Console.log(o, context, "dir", Firebug.DOMPanel.DirTable);
-        return defaultReturnValue;
+        return Console.getDefaultReturnValue(win);
     };
 
     console.dirxml = function dirxml(o)
@@ -87,7 +87,7 @@ function createFirebugConsole(context, win, defaultReturnValue)
             o = o.documentElement;
 
         Firebug.Console.log(o, context, "dirxml", Firebug.HTMLPanel.SoloElement);
-        return defaultReturnValue;
+        return Console.getDefaultReturnValue(win);
     };
 
     console.trace = function firebugDebuggerTracer()
@@ -97,20 +97,20 @@ function createFirebugConsole(context, win, defaultReturnValue)
         debugger;
         delete unwrapped.top._firebugStackTrace;
 
-        return defaultReturnValue;
+        return Console.getDefaultReturnValue(win);
     };
 
     console.group = function group()
     {
         var sourceLink = getStackLink();
         Firebug.Console.openGroup(arguments, null, "group", null, false, sourceLink);
-        return defaultReturnValue;
+        return Console.getDefaultReturnValue(win);
     };
 
     console.groupEnd = function()
     {
         Firebug.Console.closeGroup(context);
-        return defaultReturnValue;
+        return Console.getDefaultReturnValue(win);
     };
 
     console.groupCollapsed = function()
@@ -123,19 +123,19 @@ function createFirebugConsole(context, win, defaultReturnValue)
         // Use rather a different method that causes auto collapsing of the group
         // when it's created.
         Firebug.Console.openCollapsedGroup(arguments, null, "group", null, false, sourceLink);
-        return defaultReturnValue;
+        return Console.getDefaultReturnValue(win);
     };
 
     console.profile = function(title)
     {
         Firebug.Profiler.startProfiling(context, title);
-        return defaultReturnValue;
+        return Console.getDefaultReturnValue(win);
     };
 
     console.profileEnd = function()
     {
         Firebug.Profiler.stopProfiling(context);
-        return defaultReturnValue;
+        return Console.getDefaultReturnValue(win);
     };
 
     console.count = function(key)
@@ -166,19 +166,19 @@ function createFirebugConsole(context, win, defaultReturnValue)
 
             frameCounter.logRow.firstChild.firstChild.nodeValue = label;
         }
-        return defaultReturnValue;
+        return Console.getDefaultReturnValue(win);
     };
 
     console.clear = function()
     {
         Firebug.Console.clear(context);
-        return defaultReturnValue;
+        return Console.getDefaultReturnValue(win);
     };
 
     console.time = function(name, reset)
     {
         if (!name)
-            return defaultReturnValue;
+            return Console.getDefaultReturnValue(win);
 
         var time = new Date().getTime();
 
@@ -188,10 +188,10 @@ function createFirebugConsole(context, win, defaultReturnValue)
         var key = "KEY"+name.toString();
 
         if (!reset && this.timeCounters[key])
-            return defaultReturnValue;
+            return Console.getDefaultReturnValue(win);
 
         this.timeCounters[key] = time;
-        return defaultReturnValue;
+        return Console.getDefaultReturnValue(win);
     };
 
     console.timeEnd = function(name)
@@ -200,7 +200,7 @@ function createFirebugConsole(context, win, defaultReturnValue)
         var diff = undefined;
 
         if (!this.timeCounters)
-            return defaultReturnValue;
+            return Console.getDefaultReturnValue(win);
 
         var key = "KEY"+name.toString();
 
@@ -235,7 +235,7 @@ function createFirebugConsole(context, win, defaultReturnValue)
     console.table = function(data, columns)
     {
         FirebugReps.Table.log(data, columns, context);
-        return defaultReturnValue;
+        return Console.getDefaultReturnValue(win);
     };
 
     console.error = function error()
@@ -256,13 +256,13 @@ function createFirebugConsole(context, win, defaultReturnValue)
     /*console.memoryProfile = function(title)
     {
         Firebug.MemoryProfiler.start(context, title);
-        return defaultReturnValue;
+        return Console.getDefaultReturnValue(win);
     };
 
     console.memoryProfileEnd = function()
     {
         Firebug.MemoryProfiler.stop(context);
-        return defaultReturnValue;
+        return Console.getDefaultReturnValue(win);
     };*/
 
     // Expose only these properties to the content scope (read only).
@@ -310,8 +310,9 @@ function createFirebugConsole(context, win, defaultReturnValue)
         if (!sourceLink)
             sourceLink = linkToSource ? getStackLink() : null;
 
+        var ignoreReturnValue = Firebug.Console.getDefaultReturnValue(win);
         var rc = Firebug.Console.logFormatted(args, context, className, noThrottle, sourceLink);
-        return rc ? rc : defaultReturnValue;
+        return rc ? rc : ignoreReturnValue;
     };
 
     function logAssert(category, args)
@@ -370,7 +371,7 @@ function createFirebugConsole(context, win, defaultReturnValue)
         if (row)
             row.scrollIntoView();
 
-        return defaultReturnValue;
+        return Console.getDefaultReturnValue(win);
     };
 
     function getComponentsStackDump()

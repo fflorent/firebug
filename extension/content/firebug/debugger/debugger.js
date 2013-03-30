@@ -5,8 +5,9 @@ define([
     "firebug/lib/object",
     "firebug/lib/locale",
     "firebug/firebug",
+    "firebug/debugger/debuggerLib",
 ],
-function(FBTrace, Obj, Locale, Firebug) {
+function(FBTrace, Obj, Locale, Firebug, DebuggerLib) {
 
 // ********************************************************************************************* //
 // Constants
@@ -15,6 +16,7 @@ const Cc = Components.classes;
 const Ci = Components.interfaces;
 
 var Trace = FBTrace.to("DBG_DEBUGGER");
+var TraceError = FBTrace.to("DBG_ERRORS");
 
 // ********************************************************************************************* //
 
@@ -110,29 +112,13 @@ Firebug.Debugger = Obj.extend(Firebug.ActivableModule,
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-    // Debugging and monitoring
+    // Tracing (see issue 6220)
 
     traceAll: function(context)
     {
     },
 
     untraceAll: function(context)
-    {
-    },
-
-    monitorFunction: function(fn, mode)
-    {
-    },
-
-    unmonitorFunction: function(fn, mode)
-    {
-    },
-
-    monitorScript: function(fn, script, mode)
-    {
-    },
-
-    unmonitorScript: function(fn, script, mode)
     {
     },
 
@@ -239,8 +225,46 @@ Firebug.Debugger = Obj.extend(Firebug.ActivableModule,
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     // Evaluation
 
+    // xxxHonza: this entire methods should share API with the CommandLine if possible.
     evaluate: function(js, context, scope)
     {
+        Trace.sysout("debugger.evaluate; " + js, scope);
+
+        var currentFrame = context.currentFrame;
+        if (!currentFrame)
+            return;
+
+        var threadActor = DebuggerLib.getThreadActor(context);
+        var frameActor = currentFrame.getActor();
+        var frame = threadActor._requestFrame(frameActor);
+
+        try
+        {
+            var result;
+
+            var dGlobal = DebuggerLib.getDebuggeeGlobal(context);
+            scope = dGlobal.makeDebuggeeValue(scope);
+
+            if (scope)
+                result = frame.evalWithBindings(js, scope);
+            else
+                result = frame.eval(js);
+
+            Trace.sysout("debugger.evaluate; RESULT:", result);
+
+            if (result.hasOwnProperty("return"))
+            {
+                result = result["return"];
+                if (typeof(result) == "object")
+                    return DebuggerLib.unwrapDebuggeeValue(result["return"]);
+                else
+                    return result;
+            }
+        }
+        catch (e)
+        {
+            TraceError.sysout("debugger.evaluate; EXCEPTION " + e, e);
+        }
     },
 
     evaluateInCallingFrame: function(js, fileName, lineNo)
@@ -255,6 +279,7 @@ Firebug.Debugger = Obj.extend(Firebug.ActivableModule,
 
     hasValidStack: function(context)
     {
+        return context.stopped;
     },
 
     getCurrentFrameKeys: function(context)

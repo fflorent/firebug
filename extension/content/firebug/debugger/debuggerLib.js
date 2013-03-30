@@ -1,18 +1,33 @@
 /* See license.txt for terms of usage */
 
+/*jshint esnext:true, es5:true, curly:false*/
+/*global FBTrace:true, Components:true, define:true */
+
+
 define([
-    "firebug/lib/dom"
+    "firebug/lib/wrapper",
 ],
-function(Dom) {
+function(Wrapper) {
+
 "use strict";
+
 // ********************************************************************************************* //
 // Constants
 
+var Cc = Components.classes;
+var Ci = Components.interfaces;
 var Cu = Components.utils;
-var dglobalWeakMap = new WeakMap();
-var debuggerSingleton = null;
 
+Cu["import"]("resource://gre/modules/devtools/dbg-server.jsm");
+
+// Debugees
+var dglobalWeakMap = new WeakMap();
+
+// Module object
 var DebuggerLib = {};
+
+// ********************************************************************************************* //
+// Implementation
 
 /**
  * Unwraps the value of a debuggee object.
@@ -29,8 +44,14 @@ DebuggerLib.unwrapDebuggeeValue = function(obj, global, dglobal)
     if (typeof obj !== "object" || obj === null)
         return obj;
 
-    if (obj.unsafeDereference)
+    if (typeof(obj.unsafeDereference) != "undefined")
         return obj.unsafeDereference();
+
+    if (!global || !dglobal)
+    {
+        TraceError.sysout("debuggerClientModule.getObject; You need patch from bug 837723");
+        return;
+    }
 
     // Define a new property to get the debuggee value.
     dglobal.defineProperty("_firebugUnwrappedDebuggerObject", {
@@ -51,22 +72,122 @@ DebuggerLib.unwrapDebuggeeValue = function(obj, global, dglobal)
  *
  * @return {Debuggee Window} The debuggee global
  */
-DebuggerLib.getDebuggeeGlobal = function(global, context)
+DebuggerLib.getDebuggeeGlobal = function(context, global)
 {
-    var dbg;
+    global = global || context.getCurrentGlobal();
+
     var dglobal = dglobalWeakMap.get(global.document);
     if (!dglobal)
     {
-        dbg = getInactiveDebuggerForContext(context);
+        var dbg = getInactiveDebuggerForContext(context);
         if (!dbg)
             return;
 
-        dglobal = dbg.addDebuggee(global);
-        dbg.removeDebuggee(global);
+        // xxxFlorent: For a reason I ignore, there are some conflicts with the ShareMeNot addon.
+        //   TODO see what cause that behaviour, why, and if there are no other addons in that case.
+        var contentView = Wrapper.getContentView(global);
+        dglobal = dbg.addDebuggee(contentView);
+        dbg.removeDebuggee(contentView);
         dglobalWeakMap.set(global.document, dglobal);
+
+        if (FBTrace.DBG_DEBUGGER)
+            FBTrace.sysout("new debuggee global instance created", dglobal);
     }
     return dglobal;
 };
+
+// ********************************************************************************************* //
+// Local Access (hack for easier transition to JSD2/RDP)
+
+/**
+ * The next step is to make this method asynchronous to be closer to the
+ * remote debugging requirements. Of course, it should use Promise
+ * as the return value.
+ *
+ * @param {Object} context
+ * @param {Object} actorId
+ */
+DebuggerLib.getObject = function(context, actorId)
+{
+    try
+    {
+        // xxxHonza: access server side objects, of course even hacks needs
+        // good architecure, refactor.
+        // First option: implement a provider used by UI widgets (e.g. DomTree)
+        // See: https://bugzilla.mozilla.org/show_bug.cgi?id=837723
+        var threadActor = this.getThreadActor(context);
+        var actor = threadActor.threadLifetimePool.get(actorId);
+
+        if (!actor && threadActor._pausePool)
+            actor = threadActor._pausePool.get(actorId);
+
+        if (!actor)
+            return null;
+
+        return this.unwrapDebuggeeValue(actor.obj);
+    }
+    catch (e)
+    {
+        TraceError.sysout("debuggerClientModule.getObject; EXCEPTION " + e, e);
+    }
+}
+
+DebuggerLib.getThreadActor = function(context)
+{
+    try
+    {
+        var conn = DebuggerServer._connections["conn0."];
+        var tabActor = conn.rootActor._tabActors.get(context.browser);
+        return tabActor.threadActor;
+    }
+    catch (e)
+    {
+        TraceError.sysout("debuggerClientModule.getObject; EXCEPTION " + e, e);
+    }
+}
+
+// ********************************************************************************************* //
+// Executable Lines
+
+DebuggerLib.getNextExecutableLine = function(context, aLocation)
+{
+    var threadClient = this.getThreadActor(context);
+
+    var scripts = threadClient.dbg.findScripts(aLocation);
+    if (scripts.length == 0)
+        return;
+
+    for (var i=0; i<scripts.length; i++)
+    {
+        var script = scripts[i];
+        var offsets = script.getLineOffsets(aLocation.line);
+        if (offsets.length > 0)
+            return aLocation;
+    }
+
+    var scripts = threadClient.dbg.findScripts({
+        url: aLocation.url,
+        line: aLocation.line,
+        innermost: true
+    });
+
+    for (var i=0; i<scripts.length; i++)
+    {
+        var script = scripts[i];
+        var offsets = script.getAllOffsets();
+        for (var line = aLocation.line; line < offsets.length; ++line)
+        {
+            if (offsets[line])
+            {
+                return {
+                    url: aLocation.url,
+                    line: line,
+                    column: aLocation.column
+                };
+            }
+        }
+    }
+}
 
 // ********************************************************************************************* //
 // Local helpers
@@ -108,12 +229,10 @@ var getInactiveDebuggerForContext = function(context)
     return dbg;
 };
 
-
 // ********************************************************************************************* //
+// Registration
 
 return DebuggerLib;
 
 // ********************************************************************************************* //
-
-
 });

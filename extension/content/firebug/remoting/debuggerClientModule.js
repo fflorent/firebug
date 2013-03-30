@@ -188,9 +188,10 @@ var DebuggerClientModule = Obj.extend(Firebug.Module,
     {
         Trace.sysout("debuggerClientModule.onTabDetached;", arguments);
 
-        // xxxHonza: we need pass context to the listeners. 
-        this.dispatch("onThreadDetached", arguments);
-        this.dispatch("onTabDetached", arguments);
+        // xxxHonza: we need pass context to the listeners,
+        // but avoid using Firebug.currentContext.
+        this.dispatch("onThreadDetached", [Firebug.currentContext]);
+        this.dispatch("onTabDetached", [Firebug.currentContext]);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -377,59 +378,6 @@ var DebuggerClientModule = Obj.extend(Firebug.Module,
             Trace.sysout("PACKET SEND " + JSON.stringify(packet), packet);
 
             send.apply(self.transport, arguments);
-        }
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-    // Local Access (hack for easier transition to JSD2/RDP)
-
-    /**
-     * The next step is to make this method asynchronous to be closer to the
-     * remote debugging requirements. Of course, it should use Promise
-     * as the return value.
-     *
-     * @param {Object} context
-     * @param {Object} actorId
-     */
-    getObject: function(context, actorId)
-    {
-        try
-        {
-            // xxxHonza: access server side objects, of course even hacks needs
-            // good architecure, refactor.
-            // First option: implement a provider used by UI widgets (e.g. DomTree)
-            // See: https://bugzilla.mozilla.org/show_bug.cgi?id=837723
-            var conn = DebuggerServer._connections["conn0."];
-            var tabActor = conn.rootActor._tabActors.get(context.browser);
-            var threadActor = tabActor.threadActor;
-
-            var actor = threadActor.threadLifetimePool.get(actorId);
-
-            if (!actor && threadActor._pausePool)
-                actor = threadActor._pausePool.get(actorId);
-
-            if (!actor)
-                return null;
-
-            var obj = actor.obj;
-            if (!obj)
-                FBTrace.sysout("no obj", actor)
-
-            if (typeof(obj.unsafeDereference) != "undefined")
-            {
-                return obj.unsafeDereference();
-            }
-            else
-            {
-                TraceError.sysout("debuggerClientModule.getObject; You need patch from " +
-                    "bug 837723");
-            }
-
-            return null;
-        }
-        catch (e)
-        {
-            TraceError.sysout("debuggerClientModule.getObject; EXCEPTION " + e, e);
         }
     },
 });

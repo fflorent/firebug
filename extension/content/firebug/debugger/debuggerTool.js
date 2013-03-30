@@ -224,6 +224,12 @@ var DebuggerTool = Obj.extend(Firebug.Module,
 
         var s = script;
 
+        if (!context.sourceFileMap)
+        {
+            TraceError.sysout("debuggerTool.addScript; ERROR Source File Map is NULL", script);
+            return;
+        }
+
         // xxxHonza: Ignore inner script for now
         if (context.sourceFileMap[s.url])
             return;
@@ -281,8 +287,21 @@ var DebuggerTool = Obj.extend(Firebug.Module,
         context.stopped = true;
         context.currentPauseActor = packet.actor;
 
+        // Notify listeners, about debugger pause event. Listeners can used this event
+        // to decide whether the debugger should really pause (return value false) or
+        // rather be immediatelly resumed (return value true).
+        // xxxHonza: all listeners should be executed, which is not the case of dispatch2
+        // Do we need dispatch3? Or a new parameter?
+        if (this.dispatch2("onDebuggerPaused", [context, event, packet]))
+        {
+            Trace.sysout("debuggerTool.paused; Listeners want to resume debugger.");
+            this.resume(context);
+            return;
+        }
+
         // Apply breakpoint condition logic. If a breakpoint-condition evaluation
         // result is false, the debugger is immediatelly resumed.
+        // xxxHonza: the logic could be implemented as a listener.
         if (!this.checkBreakpointCondition(context, event, packet))
             return;
 
@@ -416,10 +435,19 @@ var DebuggerTool = Obj.extend(Firebug.Module,
             return;
         }
 
+        var self = this;
         var doSetBreakpoint = function _doSetBreakpoint(response, bpClient)
         {
+            var actualLocation = response.actualLocation;
+
             Trace.sysout("debuggerTool.onSetBreakpoint; " + bpClient.location.url + " (" +
                 bpClient.location.line + ")", bpClient);
+
+            if (actualLocation && actualLocation.line != bpClient.location.line)
+            {
+                // To be found when it needs removing.
+                bpClient.location.line = actualLocation.line;
+            }
 
             // TODO: error logging?
 
@@ -428,11 +456,16 @@ var DebuggerTool = Obj.extend(Firebug.Module,
             if (!context.breakpointClients)
                 context.breakpointClients = [];
 
-            context.breakpointClients.push(bpClient);
+            //xxxFarshid: Shouldn't we save bpClient object only if there is no error?
 
-            // TODO: update the UI?
+            // FF 19: uses same breakpoint client object for a executable line and
+            // all non-executable lines above that, so doesn't store breakpoint client
+            // objects if there is already one with same actor.
+            if (!self.breakpointActorExists(context, bpClient))
+                context.breakpointClients.push(bpClient);
 
-            callback(response, bpClient);
+            if (callback)
+                callback(response, bpClient);
         };
 
         return context.activeThread.setBreakpoint({
@@ -535,6 +568,23 @@ var DebuggerTool = Obj.extend(Firebug.Module,
                 return client;
             }
         }
+    },
+
+    breakpointActorExists: function(context, bpClient)
+    {
+        var clients = context.breakpointClients;
+        if (!clients)
+            return false;
+        var client;
+        for (var i=0, len = clients.length; i < len; i++)
+        {
+            client = clients[i];
+            if (client.actor === bpClient.actor)
+            {
+                return true;
+            }
+        }
+        return false;
     },
 
     enableBreakpoint: function(context, url, lineNumber, callback)
