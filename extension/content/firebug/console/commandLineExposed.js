@@ -307,7 +307,10 @@ function evaluate(context, win, expr, origExpr, onSuccess, onError)
 
         // xxxFlorent: FIXME (?): the line number and the stacktrace are wrong in that case
         if (typeof exc !== "object")
-            exc = {message: exc};
+        {
+            exc = new Error(exc, null, null);
+            exc.fileName = exc.lineNumber = exc.stack = null;
+        }
 
         var shouldModify = false, isXPCException = false;
         var fileName = exc.filename || exc.fileName || "";
@@ -315,7 +318,7 @@ function evaluate(context, win, expr, origExpr, onSuccess, onError)
         var lineNumber = null;
         var stack = null;
         var splitStack;
-        var isFileNameMasked = (fileName === "debugger eval code");
+        var isFileNameMasked = DebuggerLib.isFrameLocationEval(fileName);
         if (isInternalError || isFileNameMasked)
         {
             shouldModify = true;

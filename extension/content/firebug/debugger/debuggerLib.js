@@ -88,6 +88,19 @@ DebuggerLib.getDebuggeeGlobal = function(context, global)
     return dglobal;
 };
 
+/**
+ * Returns true if the frame location refers to the command entered by the user
+ * through the command line.
+ *
+ * @param {string} frameLocation
+ *
+ * @return {boolean}
+ */
+DebuggerLib.isFrameLocationEval = function(frameFilename)
+{
+    return frameFilename === "debugger eval code";
+}
+
 // ********************************************************************************************* //
 // Local helpers
 
