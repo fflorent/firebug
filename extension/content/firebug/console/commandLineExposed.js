@@ -61,23 +61,21 @@ function createFirebugCommandLine(context, win)
         return null;
     }
 
-    // the debuggee global:
+    // The debuggee global.
     var dglobal = DebuggerLib.getDebuggeeGlobal(context, win);
 
     var commandLine = commandLineCache.get(win.document);
     if (commandLine)
         return copyCommandLine(commandLine, dglobal);
 
-    // The commandLine object
+    // The commandLine object.
     commandLine = dglobal.makeDebuggeeValue(Object.create(null));
 
     var console = Firebug.ConsoleExposed.createFirebugConsole(context, win);
-    // The command line API instance:
+    // The command line API instance.
     var commands = CommandLineAPI.getCommandLineAPI(context);
 
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-    // Exposed Properties
-
+    // Helpers for command creation.
     function createCommandHandler(command)
     {
         var wrappedCommand = function()
@@ -132,7 +130,7 @@ function createFirebugCommandLine(context, win)
         };
     };
 
-    // Define command line methods
+    // Define command line methods.
     for (var commandName in commands)
     {
         var command = commands[commandName];
@@ -159,40 +157,20 @@ function createFirebugCommandLine(context, win)
 
     commandLineCache.set(win.document, commandLine);
 
-    // return a copy so the original one is preserved from changes
+    // Return a copy so the original one is preserved from changes.
     return copyCommandLine(commandLine, dglobal);
-}
-
-function copyCommandLine(commandLine, dglobal)
-{
-    var copy = dglobal.makeDebuggeeValue(Object.create(null));
-    for (var name in commandLine)
-        copy[name] = commandLine[name];
-    return copy;
-}
-
-function findLineNumberInExceptionStack(splitStack)
-{
-    var m = splitStack[0].match(/:(\d+)$/);
-    return m !== null ? +m[1] : null;
-}
-
-function correctStackTrace(splitStack)
-{
-    var filename = Components.stack.filename;
-    // remove the frames over the evaluated expression
-    for (var i = 0; i < splitStack.length-1 &&
-        splitStack[i+1].indexOf(evaluate.name + "@" + filename, 0) === -1 ; i++);
-
-    if (i >= splitStack.length)
-        return false;
-    splitStack.splice(0, i);
-    return true;
 }
 
 // ********************************************************************************************* //
 // User Commands
 
+/**
+ * Registers a command.
+ *
+ * @param {string} name The name of the command
+ * @param {object} config The configuration. See some examples in commandLineHelp.js 
+ *      and commandLineInclude.js
+ */
 function registerCommand(name, config)
 {
     if (commandNames[name] || consoleShortcuts[name] || props[name] || userCommands[name])
@@ -210,6 +188,11 @@ function registerCommand(name, config)
     return true;
 }
 
+/**
+ * Unregisters a command.
+ *
+ * @param {string} name The name of the command to unregister
+ */
 function unregisterCommand(name)
 {
     if (!userCommands[name])
@@ -227,6 +210,14 @@ function unregisterCommand(name)
     return true;
 }
 
+/**
+ * Returns true if the scope is specific of the commands bindings.
+ *
+ * @param {Scope} scope
+ * @param {Window} win The (wrapped) window
+ *
+ * @return {boolean}
+ */
 function isCommandLineScope(scope, win)
 {
     var unwrappedWin = Wrapper.getContentView(win);
@@ -235,27 +226,18 @@ function isCommandLineScope(scope, win)
     return scope.type === "object" && commandLine.cd === scope.object.cd;
 }
 
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-// Helpers (not accessible from web content)
-
-function updateVars(commandLine, dglobal, context)
-{
-    var htmlPanel = context.getPanel("html", true);
-    var vars = htmlPanel ? htmlPanel.getInspectorVars() : null;
-
-    for (var prop in vars)
-        commandLine[prop] = dglobal.makeDebuggeeValue(vars[prop]);
-}
-
-function removeConflictingNames(commandLine, context, contentView)
-{
-    for (var name in commandLine)
-    {
-        if (contentView.hasOwnProperty(name))
-            delete commandLine[name];
-    }
-}
-
+/**
+ * Evaluates an expression.
+ *
+ * @param {object} context
+ * @param {Window} win
+ * @param {string} expr The expression (transformed if needed)
+ * @param {string} origExpr The expression as typed by the user
+ * @param {function} onSuccess The function to trigger in case of success
+ * @param {function} onError The function to trigger in case of exception
+ *
+ * @return {*} the result of the evaluation
+ */
 function evaluate(context, win, expr, origExpr, onSuccess, onError)
 {
     var result;
@@ -395,6 +377,54 @@ function evaluate(context, win, expr, origExpr, onSuccess, onError)
 
     onSuccess(result, context);
     return result;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// Helpers (not accessible from web content)
+
+function copyCommandLine(commandLine, dglobal)
+{
+    var copy = dglobal.makeDebuggeeValue(Object.create(null));
+    for (var name in commandLine)
+        copy[name] = commandLine[name];
+    return copy;
+}
+
+function findLineNumberInExceptionStack(splitStack)
+{
+    var m = splitStack[0].match(/:(\d+)$/);
+    return m !== null ? +m[1] : null;
+}
+
+function correctStackTrace(splitStack)
+{
+    var filename = Components.stack.filename;
+    // remove the frames over the evaluated expression
+    for (var i = 0; i < splitStack.length-1 &&
+        splitStack[i+1].indexOf(evaluate.name + "@" + filename, 0) === -1 ; i++);
+
+    if (i >= splitStack.length)
+        return false;
+    splitStack.splice(0, i);
+    return true;
+}
+
+function updateVars(commandLine, dglobal, context)
+{
+    var htmlPanel = context.getPanel("html", true);
+    var vars = htmlPanel ? htmlPanel.getInspectorVars() : null;
+
+    for (var prop in vars)
+        commandLine[prop] = dglobal.makeDebuggeeValue(vars[prop]);
+}
+
+function removeConflictingNames(commandLine, context, contentView)
+{
+    for (var name in commandLine)
+    {
+        if (contentView.hasOwnProperty(name))
+            delete commandLine[name];
+    }
 }
 
 // ********************************************************************************************* //
