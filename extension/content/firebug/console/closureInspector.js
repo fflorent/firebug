@@ -10,8 +10,9 @@ define([
     "firebug/lib/wrapper",
     "firebug/lib/object",
     "firebug/debugger/debuggerLib",
+    "firebug/console/commandLineExposed",
 ],
-function(Firebug, Wrapper, Obj, DebuggerLib) {
+function(Firebug, Wrapper, Obj, DebuggerLib, CommandLineExposed) {
 "use strict";
 
 // ********************************************************************************************* //
@@ -177,13 +178,12 @@ var ClosureInspector =
             var env = this.getEnvironmentForObject(win, obj, context);
             for (var scope = env; scope; scope = scope.parent)
             {
-                if (scope.type === "with" && scope.getVariable("profileEnd"))
-                {
-                    // Almost certainly the with(_FirebugCommandLine) block,
-                    // which is at the top of the scope chain on objects
-                    // defined through the console. Hide it for a nicer display.
+                // Scope of the bindings for the command line's commands
+                // which is at the top of the scope chain on objects
+                // defined through the console. Hide it for a nicer display.
+                if (CommandLineExposed.isCommandLineScope(scope, win))
                     break;
-                }
+
                 if (!this.isScopeInteresting(scope))
                     break;
 

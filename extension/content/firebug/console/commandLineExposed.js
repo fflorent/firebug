@@ -227,6 +227,14 @@ function unregisterCommand(name)
     return true;
 }
 
+function isCommandLineScope(scope, win)
+{
+    var unwrappedWin = Wrapper.getContentView(win);
+    var commandLine = commandLineCache.get(unwrappedWin);
+    // test whether the scope is an object and if its object contains commandLine functions
+    return scope.type === "object" && commandLine.cd === scope.object.cd;
+}
+
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 // Helpers (not accessible from web content)
 
@@ -401,6 +409,7 @@ Firebug.CommandLineExposed =
     userCommands: userCommands,
     registerCommand: registerCommand,
     unregisterCommand: unregisterCommand,
+    isCommandLineScope: isCommandLineScope,
     evaluate: evaluate,
 };
 
