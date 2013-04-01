@@ -112,6 +112,12 @@ Firebug.CommandLine = Obj.extend(Firebug.Module,
         {
             onSuccess = function(result)
             {
+                if (FBTrace.DBG_COMMANDLINE)
+                {
+                    FBTrace.sysout("commandLine.evaluateInGlobal; the evaluation succeeded "+
+                        "and returned: "+ result, result);
+                }
+
                 var ignoreReturnValue = Console.getDefaultReturnValue(win);
                 if (result === ignoreReturnValue)
                     return;
@@ -120,30 +126,29 @@ Firebug.CommandLine = Obj.extend(Firebug.Module,
             }
         }
 
-        if (exceptionFunction)
+        if (!exceptionFunction)
         {
-            onError = function(result)
-            {
-                exceptionFunction(result, context, "errorMessage");
-            };
-        }
-        else
-        {
-            onError = function(result)
+            exceptionFunction = function(result, context)
             {
                 Firebug.Console.logFormatted([result], context, "error", true);
-            };
+            }
         }
+
+        onError = function(result)
+        {
+            if (FBTrace.DBG_COMMANDLINE)
+            {
+                FBTrace.sysout("commandLine.evaluateInGlobal; the evaluation threw "+
+                    "an exception:" + result, result);
+            }
+
+            exceptionFunction(result, context, "errorMessage");
+        };
 
         Firebug.Console.injector.attachIfNeeded(context, win);
 
         origExpr = origExpr || expr;
-        var ret = CommandLineExposed.evaluate(context, win, expr, origExpr, onSuccess, onError);
-
-        if (FBTrace.DBG_COMMANDLINE)
-        {
-            FBTrace.sysout("commandLine.evaluateInGlobal returned: "+ ret);
-        }
+        CommandLineExposed.evaluate(context, win, expr, origExpr, onSuccess, onError);
     },
 
     evaluateInDebugFrame: function(expr, context, thisValue, targetWindow,

@@ -227,7 +227,9 @@ function isCommandLineScope(scope, win)
 }
 
 /**
- * Evaluates an expression.
+ * Evaluates an expression in the thread of the webpage, so the Firebug UI is not frozen
+ * when the expression calls a function which will be paused.
+ *
  *
  * @param {object} context
  * @param {Window} win
@@ -236,7 +238,22 @@ function isCommandLineScope(scope, win)
  * @param {function} onSuccess The function to trigger in case of success
  * @param {function} onError The function to trigger in case of exception
  *
- * @return {*} the result of the evaluation
+ * @see CommandLine.evaluate
+ */
+function evaluateInPageContext(context, win)
+{
+    executeInWindowContext(win, evaluate, arguments);
+}
+
+/**
+ * Evaluates an expression.
+ *
+ * @param {object} context
+ * @param {Window} win
+ * @param {string} expr The expression (transformed if needed)
+ * @param {string} origExpr The expression as typed by the user
+ * @param {function} onSuccess The function to trigger in case of success
+ * @param {function} onError The function to trigger in case of exception
  */
 function evaluate(context, win, expr, origExpr, onSuccess, onError)
 {
@@ -371,12 +388,11 @@ function evaluate(context, win, expr, origExpr, onSuccess, onError)
             result.source = exc.source;
         }
 
-        onError(result, context);
-        return result;
+        executeInWindowContext(window, onError, [result, context]);
+        return;
     }
 
-    onSuccess(result, context);
-    return result;
+    executeInWindowContext(window, onSuccess, [result, context]);
 }
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -427,6 +443,33 @@ function removeConflictingNames(commandLine, context, contentView)
     }
 }
 
+// xxxFlorent:
+// - Is the naming good/bad? Ideas? (I admit I am not sure what really happens)
+// - Ideas for a better implementation (if it exists)? 
+//  (Note that using win.setTimeout(function(){...}, 0) breaks the auto-completion for some reasons)
+/**
+ * Executes a function in another window execution context.
+ *
+ * Useful when we have to pause some debuggee functions without freezing
+ * the Firebug UI.
+ *
+ * @param {Window} win The window having the thread in which we want to execute the function
+ * @param {function} func The function to execute
+ * @param {Array or Array-Like object} args The arguments to pass to the function
+ */
+function executeInWindowContext(win, func, args)
+{
+    var listener = function()
+    {
+        win.document.removeEventListener("firebugCommandLine", listener);
+        func.apply(null, args);
+    }
+    win.document.addEventListener("firebugCommandLine", listener);
+    var event = document.createEvent("Events");
+    event.initEvent("firebugCommandLine", true, false);
+    win.document.dispatchEvent(event);
+}
+
 // ********************************************************************************************* //
 // Registration
 
@@ -440,7 +483,7 @@ Firebug.CommandLineExposed =
     registerCommand: registerCommand,
     unregisterCommand: unregisterCommand,
     isCommandLineScope: isCommandLineScope,
-    evaluate: evaluate,
+    evaluate: evaluateInPageContext,
 };
 
 return Firebug.CommandLineExposed;
