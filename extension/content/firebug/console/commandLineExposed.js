@@ -220,10 +220,13 @@ function unregisterCommand(name)
  */
 function isCommandLineScope(scope, win)
 {
-    var unwrappedWin = Wrapper.getContentView(win);
-    var commandLine = commandLineCache.get(unwrappedWin);
-    // test whether the scope is an object and if its object contains commandLine functions
-    return scope.type === "object" && commandLine.cd === scope.object.cd;
+    var commandLine = commandLineCache.get(win.document);
+
+    // This should never occur.
+    if (!commandLine && (FBTrace.DBG_COMMANDLINE || FBTrace.DBG_ERRORS))
+        FBTrace.sysout("CommandLineExposed.isCommandLineScope; could not get commandLine");
+    // Test whether the scope is an object and if its object contains commandLine functions
+    return scope.type === "object" && commandLine && commandLine.cd === scope.getVariable("cd");
 }
 
 /**
