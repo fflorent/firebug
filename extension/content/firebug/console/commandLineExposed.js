@@ -280,6 +280,9 @@ function evaluate(context, win, expr, origExpr, onSuccess, onError)
     // do not print anything in the console.
     if (!resObj)
     {
+        if (FBTrace.DBG_ERROR)
+            FBTrace.sysout("CommandLineExposed.evaluate; something went wrong when evaluating this"+
+                " expression: "+expr);
         return;
     }
 
