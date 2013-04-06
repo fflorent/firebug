@@ -1174,6 +1174,8 @@ Firebug.Debugger = Obj.extend(Firebug.ActivableModule,
                     return this.debuggerTracer(context, frame);
                 else
                     this.setDebuggerKeywordCause(context, frame);
+                if (!context.breakingCause)
+                    return RETURN_CONTINUE;
             }
 
             return this.stop(context, frame, type);
