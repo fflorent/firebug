@@ -233,29 +233,6 @@ CommandLineAPI.getCommandLineAPI = function(context)
         return Firebug.Console.getDefaultReturnValue(context.window);
     };
 
-    commands.debug = function(fn)
-    {
-        Firebug.Debugger.monitorFunction(fn, "debug");
-        return Firebug.Console.getDefaultReturnValue(context.window);
-    };
-
-    commands.undebug = function(fn)
-    {
-        Firebug.Debugger.unmonitorFunction(fn, "debug");
-        return Firebug.Console.getDefaultReturnValue(context.window);
-    };
-
-    commands.monitor = function(fn)
-    {
-        Firebug.Debugger.monitorFunction(fn, "monitor");
-        return Firebug.Console.getDefaultReturnValue(context.window);
-    };
-
-    commands.unmonitor = function(fn)
-    {
-        Firebug.Debugger.unmonitorFunction(fn, "monitor");
-        return Firebug.Console.getDefaultReturnValue(context.window);
-    };
     // xxxHonza: removed from 1.10 (issue 5599)
     /*commands.memoryProfile = function(title)
     {
