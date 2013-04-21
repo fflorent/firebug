@@ -70,7 +70,9 @@ function createFirebugCommandLine(context, win)
     // The commandLine object.
     commandLine = dglobal.makeDebuggeeValue(Object.create(null));
 
+    // The console object.
     var console = Firebug.ConsoleExposed.createFirebugConsole(context, win);
+
     // The command line API instance.
     var commands = CommandLineAPI.getCommandLineAPI(context);
 
@@ -153,6 +155,22 @@ function createFirebugCommandLine(context, win)
         else
             commandLine[name] = createCommandHandler(command);
     }
+
+    // The unwrapped commandLine.firebug object.
+    var uwFirebugCommand = {};
+    uwFirebugCommand.__exposedProps__ = {};
+
+    for (var name in commandLine)
+    {
+        uwFirebugCommand.__exposedProps__[name] = 'r';
+        uwFirebugCommand[name] = DebuggerLib.unwrapDebuggeeValue(commandLine[name], win, dglobal);
+    }
+
+    // Create the firebug command (non-overridable).
+    commandLine.firebug = dglobal.makeDebuggeeValue(uwFirebugCommand);
+
+    // Keep the reference to the unwrapped object (hidden and inaccessible from the user).
+    commandLine.firebug.__unwrappedObject__ = uwFirebugCommand;
 
     commandLineCache.set(win.document, commandLine);
 
@@ -266,7 +284,7 @@ function evaluate(context, win, expr, origExpr, onSuccess, onError)
     var resObj;
 
     updateVars(commandLine, dglobal, context);
-    removeConflictingNames(commandLine, context, contentView);
+    removeConflictingNames(commandLine, context, contentView, expr);
 
     resObj = dglobal.evalInGlobalWithBindings(expr, commandLine);
 
@@ -405,6 +423,7 @@ function copyCommandLine(commandLine, dglobal)
     var copy = dglobal.makeDebuggeeValue(Object.create(null));
     for (var name in commandLine)
         copy[name] = commandLine[name];
+
     return copy;
 }
 
@@ -431,17 +450,34 @@ function updateVars(commandLine, dglobal, context)
 {
     var htmlPanel = context.getPanel("html", true);
     var vars = htmlPanel ? htmlPanel.getInspectorVars() : null;
+    var uwFirebugCommand = commandLine.firebug.__unwrappedObject__;
 
     for (var prop in vars)
+    {
         commandLine[prop] = dglobal.makeDebuggeeValue(vars[prop]);
+        uwFirebugCommand[prop] = vars[prop];
+        uwFirebugCommand.__exposedProps__[prop] = 'r';
+    }
 }
 
-function removeConflictingNames(commandLine, context, contentView)
+function removeConflictingNames(commandLine, context, contentView, expr)
 {
+    // Display a warning when the user likely wants to access a `firebug` variable.
+    // The regular expression ignores the properties having this name (like `window.firebug`).
+    if ("firebug" in contentView && !commandLine.firebug.__warnedExist__ &&
+        /(^|[^\.\s])\s*firebug/.test(expr))
+    {
+        var msg = Locale.$STR("commandline.firebugVarExists");
+        var args = [msg, "font-style: italic", "font-style: normal", "font-style: italic",
+            "font-style: normal"];
+        Firebug.Console.logFormatted(args, context, "warn");
+        commandLine.firebug.__warnedExist__ = true;
+    }
+
     for (var name in commandLine)
     {
         // Note: we cannot trust contentView.hasOwnProperty, so we use the "in" operator.
-        if (name in contentView)
+        if (name !== "firebug" && name in contentView)
             delete commandLine[name];
     }
 }
