@@ -1444,22 +1444,7 @@ Firebug.getConsoleByGlobal = function getConsoleByGlobal(global)
         var context = Firebug.connection.getContextByWindow(global);
         if (context)
         {
-            var handler = Firebug.Console.injector.getConsoleHandler(context, global);
-
-            if (!handler)
-                handler = Firebug.Console.isReadyElsePreparing(context, global);;
-
-            if (handler)
-            {
-                FBTrace.sysout("Firebug.getConsoleByGlobal " + handler.console + " for " +
-                    context.getName(), handler);
-
-                return handler.console;
-            }
-
-            if (FBTrace.DBG_ERRORS)
-                FBTrace.sysout("Firebug.getConsoleByGlobal FAILS, no handler for global " +
-                    global + " " + Win.safeGetWindowLocation(global), global);
+            return Firebug.Console.getExposedConsole(context);
         }
         else
         {
