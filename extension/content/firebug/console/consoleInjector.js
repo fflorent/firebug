@@ -1,21 +1,12 @@
 /* See license.txt for terms of usage */
 
 define([
-    "firebug/lib/object",
     "firebug/firebug",
-    "firebug/chrome/reps",
-    "firebug/lib/locale",
-    "firebug/lib/events",
-    "firebug/lib/url",
-    "firebug/js/stackFrame",
-    "firebug/chrome/window",
     "firebug/console/console",
-    "firebug/lib/array",
-    "firebug/lib/dom",
     "firebug/console/consoleExposed",
     "firebug/console/errors",
 ],
-function(Obj, Firebug, FirebugReps, Locale, Events, Url, StackFrame, Win, Console, Arr, Dom) {
+function(Firebug, Console) {
 
 // ********************************************************************************************* //
 // Constants
@@ -23,6 +14,8 @@ function(Obj, Firebug, FirebugReps, Locale, Events, Url, StackFrame, Win, Consol
 const Cc = Components.classes;
 const Ci = Components.interfaces;
 const Cu = Components.utils;
+
+var consoleInstancesMap = new WeakMap();
 
 // ********************************************************************************************* //
 // Console Injector
@@ -59,19 +52,34 @@ Firebug.Console.injector =
         // is a wrapper for the 'console' object.
         var sandbox = Cu.Sandbox(win);
         var getConsoleWrapper = Cu.evalInSandbox(expr, sandbox);
+        var consoleExposed = getConsoleWrapper(console);
 
-        context.exposedConsole = getConsoleWrapper(console);
-        win.wrappedJSObject.console = context.exposedConsole;
+        // Notes:
+        // - to early to use win.document in case of iframes
+        // - this function is called each time a window is reloaded / changed its location or
+        //   Firebug is activated. So consoleInstancesMap.get(win) should be set as expected.
+        consoleInstancesMap.set(win, consoleExposed);
+        win.wrappedJSObject.console = consoleExposed;
 
         if (FBTrace.DBG_CONSOLE)
             FBTrace.sysout("console.attachConsoleInjector; Firebug console attached to: " +
                 context.getName());
     },
 
-    getExposedConsole: function(context)
+    getExposedConsole: function(win)
     {
-        return context.exposedConsole;
+        return consoleInstancesMap.get(win);
     },
+
+    // For extensions that still use this function.
+    getConsoleHandler: function(context, win)
+    {
+        return {
+            win: Wrapper.wrapObject(win),
+            context: context,
+            console: this.getExposedConsole(win)
+        };
+    }
 };
 
 // ********************************************************************************************* //

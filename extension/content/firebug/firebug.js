@@ -1441,17 +1441,10 @@ Firebug.getConsoleByGlobal = function getConsoleByGlobal(global)
 {
     try
     {
-        var context = Firebug.connection.getContextByWindow(global);
-        if (context)
-        {
-            return Firebug.Console.getExposedConsole(context);
-        }
-        else
-        {
-            if (FBTrace.DBG_ERRORS)
-                FBTrace.sysout("Firebug.getConsoleByGlobal FAILS, no context for global " +
-                    global, global);
-        }
+        if (!(global instanceof Window))
+            throw new Error("global is not a Window object");
+        var win = Wrapper.wrapObject(global);
+        return Firebug.Console.getExposedConsole(win);
     }
     catch (exc)
     {

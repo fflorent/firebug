@@ -166,9 +166,9 @@ Firebug.Console = Obj.extend(ActivableConsole,
     {
     },
 
-    getExposedConsole: function(context)
+    getExposedConsole: function(win)
     {
-        return this.injector.getExposedConsole(context);
+        return this.injector.getExposedConsole(win);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
