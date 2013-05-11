@@ -4,20 +4,32 @@ function runTest()
 
     FBTest.openNewTab(basePath + "console/6402/issue6402.html", function(wrappedWin)
     {
+        var tasks = new FBTest.TaskList();
+        var iframe = wrappedWin.document.querySelector("#iframe");
+
         // Note: do NOT reload at this moment.
         FBTest.enableConsolePanel();
 
-        checkConsole(wrappedWin, "false", "window._console should NOT refer to the exposed "+
-            "Firebug console");
-        FBTest.reload(function(wrappedWin)
-        {
-            checkConsole(wrappedWin, "true", "window._console should refer to the exposed "+
-                "Firebug console");
+        // Note: Test for the FW.Firebug.getConsoleByGlobal() function.
+        var oriIframeConsoleInstance = FW.Firebug.getConsoleByGlobal(iframe.contentWindow);
 
-            checkConsoleXMLPage(function()
-            {
-                FBTestFirebug.testDone("issue6402.DONE");
-            });
+        tasks.push(reloadIframe, iframe);
+
+        tasks.push(testGetConsoleByGlobal, iframe, oriIframeConsoleInstance);
+
+        tasks.wrapAndPush(checkConsole, wrappedWin, "false", "window._console should NOT refer to "+
+            "the exposed Firebug console");
+
+        tasks.push(FBTest.reload);
+
+        tasks.wrapAndPush(checkConsole, wrappedWin, "true", "window._console should refer to the "+
+            "exposed Firebug console");
+
+        tasks.push(checkConsoleXMLPage);
+
+        tasks.run(function()
+        {
+            FBTestFirebug.testDone("issue6402.DONE");
         });
 
     });
@@ -37,4 +49,26 @@ function checkConsoleXMLPage(callback)
         FBTest.executeCommandAndVerify(callback, "window.console.log('ok');", "ok",
             "div", "logRow-log");
     });
+}
+
+function reloadIframe(callback, iframe)
+{
+    iframe.addEventListener("load", function onload()
+    {
+        FBTest.progress("iframe reloaded");
+        iframe.removeEventListener("load", onload);
+        callback();
+    });
+    iframe.contentWindow.location.reload();
+}
+
+// Tests the value returned by Firebug.getConsoleByGlobal();
+function testGetConsoleByGlobal(callback, iframe, oriIframeConsoleInstance)
+{
+    var newIframeConsoleInstance = FW.Firebug.getConsoleByGlobal(iframe.contentWindow);
+    FBTest.ok(newIframeConsoleInstance, "newIframeConsoleInstance should be non-null");
+    FBTest.ok(oriIframeConsoleInstance, "oriIframeConsoleInstance should be non-null");
+    FBTest.compare(newIframeConsoleInstance, oriIframeConsoleInstance, 
+        "newIframeConsoleInstance should be different from oriIframeConsoleInstance", true);
+    callback();
 }
