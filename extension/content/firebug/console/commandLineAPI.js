@@ -131,8 +131,8 @@ CommandLineAPI.getCommandLineAPI = function(context)
         if (FBTrace.DBG_COMMANDLINE)
             FBTrace.sysout("commandLine.cd; console ready: " + consoleReady);
 
-        // The window object parameter uses XPCSafeJSObjectWrapper, but we need XPCNativeWrapper.
-        // So use Wrapper.wrapObject() to get the XPCNativeWrapper instance of that object.
+        // The window object parameter uses XPCSafeJSObjectWrapper, but we need XrayWrapper.
+        // So use Wrapper.wrapObject() to get the XrayWrapper instance of that object.
         // Note: Wrapper.wrapObject always returns the same instance for a given object.
         context.baseWindow = Wrapper.wrapObject(object);
 
