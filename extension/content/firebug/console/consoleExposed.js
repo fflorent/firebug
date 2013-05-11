@@ -16,6 +16,8 @@ define([
 function(FirebugReps, Locale, Wrapper, Url, Str, StackFrame, Errors, Debug, Console, Options,
     DebuggerLib) {
 
+var privateMethodsMap = new WeakMap();
+
 // ********************************************************************************************* //
 
 /**
@@ -469,7 +471,40 @@ function createFirebugConsole(context, win)
         return null;
     };
 
+    // xxxFlorent: smarter ideas?
+    // Note that these methods should not be detectable by webpages.
+
+    // ***************************************************************************************** //
+    // Private Methods.
+
+    function getContext()
+    {
+        return context;
+    }
+
+    function setContext(value)
+    {
+        context = value;
+    }
+
+    privateMethodsMap.set(console, {
+        getContext: getContext,
+        setContext: setContext
+    });
+
     return console;
+}
+
+function setContext(console, context)
+{
+    var privateMethods = privateMethodsMap.get(console);
+    return privateMethods.setContext(context);
+}
+
+function getContext(console)
+{
+    var privateMethods = privateMethodsMap.get(console);
+    return privateMethods.getContext();
 }
 
 // ********************************************************************************************* //
@@ -477,7 +512,9 @@ function createFirebugConsole(context, win)
 
 Firebug.ConsoleExposed =
 {
-    createFirebugConsole: createFirebugConsole
+    createFirebugConsole: createFirebugConsole,
+    getContext: getContext,
+    setContext: setContext
 };
 
 return Firebug.ConsoleExposed;

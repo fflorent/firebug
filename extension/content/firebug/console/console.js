@@ -224,6 +224,11 @@ Firebug.Console = Obj.extend(ActivableConsole,
         Firebug.Console.injector.attachConsoleInjector(context, win);
     },
 
+    unwatchWindow: function(context, win)
+    {
+        Firebug.Console.injector.unattachConsole(win);
+    },
+
     updateOption: function(name, value)
     {
         if (name == "console.logLimit")
