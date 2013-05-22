@@ -1135,10 +1135,10 @@ Firebug.NetMonitor.NetInfoBody = domplate(Firebug.Rep, new Firebug.Listener(),
                 if (file.category == "image")
                 {
                     netInfoBox.responsePresented = true;
-    
+
                     var responseImage = netInfoBox.ownerDocument.createElement("img");
                     responseImage.src = file.href;
-    
+
                     Dom.clearNode(responseTextBox);
                     responseTextBox.appendChild(responseImage, responseTextBox);
                 }

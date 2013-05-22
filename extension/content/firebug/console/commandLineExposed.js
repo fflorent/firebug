@@ -1,5 +1,5 @@
 /* See license.txt for terms of usage */
-/*jshint esnext:true, es5:true, curly:false, evil:true, forin: false*/
+/*jshint esnext:true, curly:false, evil:true, forin: false*/
 /*global Firebug:true, FBTrace:true, Components:true, define:true */
 
 define([

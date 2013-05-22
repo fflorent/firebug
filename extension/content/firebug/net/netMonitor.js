@@ -16,11 +16,12 @@ define([
     "firebug/net/netDebugger",
     "firebug/lib/events",
     "firebug/trace/traceListener",
-    "firebug/trace/traceModule"
+    "firebug/trace/traceModule",
+    "firebug/net/autoResponder",
 ],
 function(Obj, Firebug, Firefox, Options, Win, Str, Persist, NetHttpActivityObserver,
     HttpRequestObserver, NetProgress, Http, NetUtils, NetDebugger, Events,
-    TraceListener, TraceModule) {
+    TraceListener, TraceModule, AutoResponder) {
 
 // ********************************************************************************************* //
 // Constants
@@ -161,6 +162,7 @@ Firebug.NetMonitor = Obj.extend(Firebug.ActivableModule,
             if (persistedPanelState.breakpoints)
                 context.netProgress.breakpoints = persistedPanelState.breakpoints;
         }
+        NetHttpObserver.registerObserver();
     },
 
     showContext: function(browser, context)
@@ -212,6 +214,9 @@ Firebug.NetMonitor = Obj.extend(Firebug.ActivableModule,
 
         if (Firebug.NetMonitor.isAlwaysEnabled())
             unmonitorContext(context);
+        // xxxFlorent: Don't we want that?
+        NetHttpObserver.unregisterObserver();
+
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -344,6 +349,7 @@ var NetHttpObserver =
             FBTrace.sysout("net.NetHttpObserver.register;");
 
         HttpRequestObserver.addObserver(this, "firebug-http-event", false);
+        AutoResponder.registerObserver();
         this.registered = true;
     },
 
@@ -356,6 +362,7 @@ var NetHttpObserver =
             FBTrace.sysout("net.NetHttpObserver.unregister;");
 
         HttpRequestObserver.removeObserver(this, "firebug-http-event");
+        AutoResponder.unregisterObserver();
         this.registered = false;
     },
 
