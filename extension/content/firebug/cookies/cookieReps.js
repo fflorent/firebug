@@ -264,7 +264,20 @@ CookieReps.CookieRow = domplate(CookieReps.Rep,
         return cookie.cookie.isSecure ? Locale.$STR("cookies.secure.label") : "";
     },
 
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    // Highlighter
+
+    highlightObject: function(object, context)
+    {
+    },
+
+    unhighlightObject: function(object, context)
+    {
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     // Firebug rep support
+
     supportsObject: function(cookie)
     {
         return cookie instanceof Cookie;
@@ -277,8 +290,20 @@ CookieReps.CookieRow = domplate(CookieReps.Rep,
 
     getRealObject: function(cookie, context)
     {
-        return cookie.cookie;
+        var realObject = cookie.cookie.rawCookie;
+        if (!realObject)
+        {
+            if (FBTrace.DBG_COOKIES || FBTrace.DBG_ERRORS)
+                FBTrace.sysout("cookies.getRealObject; ERROR no real cookie object!");
+
+            realObject = cookie.cookie;
+        }
+
+        return realObject;
     },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    // Context Menu
 
     getContextMenuItems: function(cookie, target, context)
     {
@@ -701,28 +726,17 @@ CookieReps.CookieChanged = domplate(CookieReps.Rep,
     // Console
     tag:
         DIV({"class": "cookieEvent", _repObject: "$object"},
-            TABLE({cellpadding: 0, cellspacing: 0},
-                TBODY(
-                    TR(
-                        TD({width: "100%"},
-                            SPAN(Locale.$STR("cookies.console.cookie"), " "),
-                            SPAN({"class": "cookieNameLabel", onclick: "$onClick"}, 
-                                "$object|getName", 
-                                " "),
-                            SPAN({"class": "cookieActionLabel"}, 
-                                "$object|getAction", 
-                                ".&nbsp;&nbsp;"),
-                            SPAN({"class": "cookieValueLabel"}, 
-                                "$object|getValue")
-                        ),
-                        TD(
-                            SPAN({"class": "cookieDomainLabel", onclick: "$onClickDomain",
-                                title: "$object|getOriginalURI"}, "$object|getDomain"),
-                            SPAN("&nbsp;") 
-                        )
-                    )
-                )
-            )
+        	SPAN(Locale.$STR("cookies.console.cookie"), " "),
+            SPAN({"class": "cookieNameLabel", onclick: "$onClick"}, 
+                "$object|getName", 
+                " "),
+            SPAN({"class": "cookieActionLabel"}, 
+                "$object|getAction", 
+                ".&nbsp;&nbsp;"),
+            SPAN({"class": "cookieValueLabel"}, 
+                "$object|getValue"),
+            DIV({"class": "cookieDomainLabel", onclick: "$onClickDomain",
+                title: "$object|getOriginalURI"}, "$object|getDomain")
         ),
 
     // Event handlers

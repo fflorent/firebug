@@ -1948,7 +1948,7 @@ this.expandElements = function(panelNode, className) // className, className, ..
  * 
  * @param {String} panelName Name of the panel that shows the result.
  * @param {Object} config Requirements, which must be fulfilled to trigger the callback function
- *     (can include "tagName", "id", "classes", "counter" and "onlyMutations")
+ *     (can include "tagName", "id", "classes", "attributes", "counter" and "onlyMutations")
  * @param {Function} callback A callback function with one parameter.
  */
 this.waitForDisplayedElement = function(panelName, config, callback)
@@ -2024,6 +2024,13 @@ this.waitForDisplayedElement = function(panelName, config, callback)
         mutationAttributes.id = config.id;
     else
         mutationAttributes.class = config.classes;
+
+    if (config.attributes)
+    {
+        for (var prop in config.attributes)
+            mutationAttributes[prop] = config.attributes[prop];
+    }
+
     var recognizer = new MutationRecognizer(doc.defaultView, config.tagName, mutationAttributes);
 
     var tempCallback = callback;
@@ -2088,17 +2095,57 @@ this.clearConsole = function(chrome)
 // ********************************************************************************************* //
 // Search
 
-this.clearSearchField = function()
+this.clearSearchField = function(callback)
 {
     // FIX ME: characters should be sent into the search box individually
     // (using key events) to simulate incremental search.
     var searchBox = FW.Firebug.chrome.$("fbSearchBox");
     searchBox.value = "";
+
+    var doc = searchBox.ownerDocument;
+    doc.defaultView.focus();
+    FBTest.focus(searchBox);
+
+    FBTest.sendKey("RETURN", "fbSearchBox");
+
+    if (callback)
+    {
+        // Firebug uses search delay so, we need to wait till the panel is updated
+        // (see firebug/chrome/searchBox module, searchDelay constant).
+        setTimeout(function() {
+            callback()
+        }, 250);
+    }
 }
 
 this.getSearchFieldText = function()
 {
     return FW.Firebug.chrome.$("fbSearchBox").value;
+}
+
+this.setSearchFieldText = function(searchText, callback)
+{
+    FBTest.clearSearchField(function()
+    {
+        // Focus the search box.
+        var searchBox = FW.Firebug.chrome.$("fbSearchBox");
+        var doc = searchBox.ownerDocument;
+        doc.defaultView.focus();
+        FBTest.focus(searchBox);
+
+        // Send text into the input box.
+        FBTest.synthesizeText(searchText, doc.defaultView);
+        FBTest.sendKey("RETURN", "fbSearchBox");
+
+        if (callback)
+        {
+            // Firebug uses search delay so, we need to wait till the panel is updated
+            // (see firebug/chrome/searchBox module, searchDelay constant).
+            setTimeout(function() {
+                callback()
+            }, 250);
+        }
+    });
 }
 
 /**
@@ -2340,6 +2387,21 @@ this.getSelectedNodeBox = function()
 
 //********************************************************************************************* //
 // CSS panel
+this.getAtRulesByType = function(type)
+{
+    var panel = FBTest.selectPanel("stylesheet");
+    var ruleTypes = panel.panelNode.getElementsByClassName("cssRuleName");
+
+    var rules = [];
+    for (var i=0, len = ruleTypes.length; i<len; ++i)
+    {
+        if (ruleTypes[i].textContent == type)
+            rules.push(FW.FBL.getAncestorByClass(ruleTypes[i], "cssRule"));
+    }
+
+    return rules;
+};
+
 this.getStyleRulesBySelector = function(selector)
 {
     var panel = FBTest.selectPanel("stylesheet");
@@ -2349,7 +2411,7 @@ this.getStyleRulesBySelector = function(selector)
     for (var i = 0, len = selectors.length; i < len; ++i)
     {
         if (selectors[i].textContent.indexOf(selector) != -1)
-            rules.push(FW.FBL.getAncestorByClass(selector, "cssRule"));
+            rules.push(FW.FBL.getAncestorByClass(selectors[i], "cssRule"));
     }
 
     return rules;
