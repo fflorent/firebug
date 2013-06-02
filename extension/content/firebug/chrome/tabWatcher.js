@@ -1104,6 +1104,15 @@ function onPageHideTopWindow(event)
     }
 }
 
+function evictTopWindow(win, uri)
+{
+    if (FBTrace.DBG_WINDOWS)
+        FBTrace.sysout("-> tabWatcher evictTopWindow win "+Win.safeGetWindowLocation(win) +
+            " uri "+uri.spec);
+
+    Firebug.TabWatcher.unwatchTopWindow(win);
+}
+
 function onUnloadTopWindow(event)
 {
     var win = event.currentTarget;
@@ -1199,13 +1208,22 @@ function onDOMWindowCreated(ev)
     }
 
     var win = tabBrowser.contentWindow;
-    var spec = win ? win.location.href : null;
+    // xxxFlorent: Is that the correct way to get the URI in this case?
+    var browser = Win.getBrowserByWindow(win);
+    var uri = browser.currentURI;
 
     if (FBTrace.DBG_WINDOWS || FBTrace.DBG_ACTIVATION)
-        FBTrace.sysout("TabWatcher.onDOMWindowCreated => "+spec+"; event:", ev);
+    {
+        FBTrace.sysout("TabWatcher.onDOMWindowCreated => event:", ev);
+        FBTrace.sysout("TabWatcher.onDOMWindowCreated => uri:"+uri.spec, uri);
+    }
 
-    if (spec)
-        Firebug.TabWatcher.watchTopWindow(win, spec);
+    // document.open() was called, the document was cleared.
+    if (uri && uri.scheme === "wyciwyg")
+        evictTopWindow(win, uri);
+
+    if (uri)
+        Firebug.TabWatcher.watchTopWindow(win, uri);
     else
         Firebug.TabWatcher.watchContext(win, null, true);
 }
