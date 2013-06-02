@@ -1170,7 +1170,7 @@ NetPhase.prototype =
 function getCacheEntry(file, netProgress)
 {
     // Bail out if the cache is disabled.
-    if (!Firebug.NetMonitor.BrowserCache.isEnabled())
+    if (Firebug.NetMonitor.isCacheDisabled())
         return;
 
     // Don't request the cache entry twice.

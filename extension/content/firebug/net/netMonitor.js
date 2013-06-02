@@ -314,6 +314,11 @@ Firebug.NetMonitor = Obj.extend(Firebug.ActivableModule,
     {
         if (context.netProgress)
             context.netProgress.post(timeStamp, [context.window, time, label, color]);
+    },
+
+    isCacheDisabled: function()
+    {
+        return Options.get("disableCache");
     }
 });
 
@@ -415,6 +420,9 @@ var NetHttpObserver =
         var name = request.URI.asciiSpec;
         var origName = request.originalURI.asciiSpec;
         var isRedirect = (name != origName);
+
+        if (Firebug.NetMonitor.isCacheDisabled())
+            request.loadFlags |= Ci.nsIRequest.LOAD_BYPASS_CACHE;
 
         // We only need to create a new context if this is a top document uri (not frames).
         if ((request.loadFlags & Ci.nsIChannel.LOAD_DOCUMENT_URI) &&

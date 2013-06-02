@@ -308,8 +308,7 @@ NetPanel.prototype = Obj.extend(Firebug.ActivablePanel,
 
     disableCacheOption: function()
     {
-        var BrowserCache = Firebug.NetMonitor.BrowserCache;
-        var disabled = !BrowserCache.isEnabled();
+        var disabled = Firebug.NetMonitor.isCacheDisabled();
         return {
             label: "net.option.Disable_Browser_Cache",
             type: "checkbox",
@@ -317,9 +316,14 @@ NetPanel.prototype = Obj.extend(Firebug.ActivablePanel,
             tooltiptext: "net.option.tip.Disable_Browser_Cache",
             command: function()
             {
-                BrowserCache.toggle(!this.hasAttribute("checked"));
+                Options.set("disableCache", this.hasAttribute("checked"));
             }
         };
+    },
+
+    isCacheDisabled: function()
+    {
+        return Options.get("disableCache");
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -1648,30 +1652,6 @@ Firebug.NetMonitor.ConditionEditor.prototype = domplate(Firebug.Breakpoint.Condi
             bp.condition = value;
     }
 });
-
-// ********************************************************************************************* //
-// Browser Cache
-
-Firebug.NetMonitor.BrowserCache =
-{
-    cacheDomain: "browser.cache",
-
-    isEnabled: function()
-    {
-        var diskCache = Options.getPref(this.cacheDomain, "disk.enable");
-        var memoryCache = Options.getPref(this.cacheDomain, "memory.enable");
-        return diskCache && memoryCache;
-    },
-
-    toggle: function(state)
-    {
-        if (FBTrace.DBG_NET)
-            FBTrace.sysout("net.BrowserCache.toggle; " + state);
-
-        Options.setPref(this.cacheDomain, "disk.enable", state);
-        Options.setPref(this.cacheDomain, "memory.enable", state);
-    }
-};
 
 // ********************************************************************************************* //
 // Registration

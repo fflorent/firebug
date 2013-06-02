@@ -1,3 +1,5 @@
+const cacheDisablePrefName = "disableCache";
+
 function runTest()
 {
     FBTest.sysout("issue4905.START");
@@ -6,14 +8,11 @@ function runTest()
     {
         FBTest.openFirebug();
 
-        var diskCache = FW.Firebug.getPref("browser.cache", "disk.enable");
-        var memoryCache = FW.Firebug.getPref("browser.cache", "memory.enable");
-        FBTest.progress("disk: " + diskCache + ", memory: " + memoryCache);
+        var browserCacheEnabled = !FBTest.getPref(cacheDisablePrefName);
+        FBTest.progress("Browser Cache enabled: " + browserCacheEnabled);
 
         // Enable browser cache
-        var browserCache = FW.Firebug.NetMonitor.BrowserCache;
-        var browserCacheEnabled = browserCache.isEnabled();
-        browserCache.toggle(true);
+        toggleCache(true);
 
         FBTest.selectPanel("net");
         FBTest.enableNetPanel();
@@ -58,11 +57,16 @@ function runTest()
 
             // Disable browser cache again if it was disabled before
             if (!browserCacheEnabled)
-                browserCache.toggle(false);
+                toggleCache(false);
 
             FBTest.testDone("issue4905.DONE");
         });
 
         FBTest.reload();
     });
+}
+
+function toggleCache(enable)
+{
+    FBTest.setPref(cacheDisablePrefName, !enable);
 }
