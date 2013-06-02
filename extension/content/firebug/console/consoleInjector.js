@@ -15,6 +15,7 @@ const Cc = Components.classes;
 const Ci = Components.interfaces;
 const Cu = Components.utils;
 
+// xxxFlorent: [ES6-SYMBOL]
 const EXPOSED_CONSOLE_KEY = "fbConsoleExposed"+Math.random();
 
 // ********************************************************************************************* //

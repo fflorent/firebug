@@ -78,13 +78,16 @@ Firebug.TabWatcher = Obj.extend(new Firebug.Listener(),
 
     initializeUI: function()
     {
-        var tabBrowser = Firefox.getElementById("content");
+        var tabBrowser = Firefox.getTabBrowser();
 
         if (FBTrace.DBG_INITIALIZE)
             FBTrace.sysout("-> tabWatcher initializeUI "+tabBrowser);
 
         if (tabBrowser)
-            tabBrowser.addProgressListener(TabProgressListener);
+        {
+            tabBrowser.addEventListener("DOMWindowCreated", onDOMWindowCreated);
+            tabBrowser.tabContainer.addEventListener("TabSelect", onDOMWindowCreated);
+        }
     },
 
     destroy: function()
@@ -96,19 +99,11 @@ Firebug.TabWatcher = Obj.extend(new Firebug.Listener(),
 
         HttpRequestObserver.removeObserver(TabWatcherHttpObserver, "firebug-http-event");
 
-        var tabBrowser = Firefox.getElementById("content");
+        var tabBrowser = Firefox.getTabBrowser();
         if (tabBrowser)
         {
-            try
-            {
-                // Exception thrown: tabBrowser.removeProgressListener is not a function
-                // when Firebug is in detached state and the origin browser window is closed.
-                tabBrowser.removeProgressListener(TabProgressListener);
-            }
-            catch (e)
-            {
-                FBTrace.sysout("tabWatcher.destroy; EXCEPTION " + e, e);
-            }
+            tabBrowser.removeEventListener("DOMWindowCreated", onDOMWindowCreated);
+            tabBrowser.tabContainer.removeEventListener("TabSelect", onDOMWindowCreated);
 
             var browsers = Firefox.getBrowsers();
             for (var i = 0; i < browsers.length; ++i)
@@ -867,56 +862,6 @@ var TabWatcherUnloader =
 Firebug.TabWatcherUnloader = TabWatcherUnloader;
 
 // ********************************************************************************************* //
-
-var TabProgressListener = Obj.extend(Http.BaseProgressListener,
-{
-    onLocationChange: function(progress, request, uri)
-    {
-        // Only watch windows that are their own parent - e.g. not frames
-        if (progress.DOMWindow.parent == progress.DOMWindow)
-        {
-            var srcWindow = Http.getWindowForRequest(request);
-            var browser = srcWindow ? Firebug.TabWatcher.getBrowserByWindow(srcWindow) : null;
-
-            if (FBTrace.DBG_WINDOWS || FBTrace.DBG_ACTIVATION)
-            {
-                var requestFromFirebuggedWindow = browser && browser.showFirebug;
-                FBTrace.sysout("-> TabProgressListener.onLocationChange "+
-                    progress.DOMWindow.location+" to: "+
-                    (uri?uri.spec:"null location")+
-                    (requestFromFirebuggedWindow?" from firebugged window":" no firebug"));
-            }
-
-            // See issue 4040
-            // the onStateChange will deal with this troublesome case
-            //if (uri && uri.spec === "about:blank")
-            //    return;
-
-            // document.open() was called, the document was cleared.
-            if (uri && uri.scheme === "wyciwyg")
-                evictTopWindow(progress.DOMWindow, uri);
-
-            if (uri)
-                Firebug.TabWatcher.watchTopWindow(progress.DOMWindow, uri);
-            else // the location change to a non-uri means we need to hide
-                Firebug.TabWatcher.watchContext(progress.DOMWindow, null, true);
-        }
-    },
-
-    onStateChange: function(progress, request, flag, status)
-    {
-        if (FBTrace.DBG_WINDOWS)
-        {
-            var win = progress.DOMWindow;
-            FBTrace.sysout("-> TabProgressListener.onStateChanged for: " +
-                Http.safeGetRequestName(request) + ", win: " + win.location.href +
-                ", content URL: " + (win.document ? win.document.URL : "no content URL") +
-                " " + Http.getStateDescription(flag));
-        }
-    }
-});
-
-// ********************************************************************************************* //
 // Obsolete
 
 var FrameProgressListener = Obj.extend(Http.BaseProgressListener,
@@ -1159,15 +1104,6 @@ function onPageHideTopWindow(event)
     }
 }
 
-function evictTopWindow(win, uri)
-{
-    if (FBTrace.DBG_WINDOWS)
-        FBTrace.sysout("-> tabWatcher evictTopWindow win "+Win.safeGetWindowLocation(win) +
-            " uri "+uri.spec);
-
-    Firebug.TabWatcher.unwatchTopWindow(win);
-}
-
 function onUnloadTopWindow(event)
 {
     var win = event.currentTarget;
@@ -1252,6 +1188,28 @@ function onUnloadWindow(event)
 
     Firebug.TabWatcher.unwatchWindow(win);
 }
+
+function onDOMWindowCreated(ev)
+{
+    var tabBrowser = Firefox.getTabBrowser();
+    if (!tabBrowser)
+    {
+        if (FBTrace.DBG_WINDOWS || FBTrace.DBG_ACTIVATION)
+            FBTrace.sysout("TabWatcher.onDOMWindowCreated; can't get tabBrowser, abort");
+    }
+
+    var win = tabBrowser.contentWindow;
+    var spec = win ? win.location.href : null;
+
+    if (FBTrace.DBG_WINDOWS || FBTrace.DBG_ACTIVATION)
+        FBTrace.sysout("TabWatcher.onDOMWindowCreated => "+spec+"; event:", ev);
+
+    if (spec)
+        Firebug.TabWatcher.watchTopWindow(win, spec);
+    else
+        Firebug.TabWatcher.watchContext(win, null, true);
+}
+
 
 // ********************************************************************************************* //
 
