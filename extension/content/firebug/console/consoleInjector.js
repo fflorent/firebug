@@ -83,10 +83,10 @@ Firebug.Console.injector =
                     if (this.getExposedConsole(win))
                     {
                         setTimeout(a.bind(this), 4);
-                        FBTrace.sysout("still okay after " + time + " ms");
+                        FBTrace.sysout("still okay after " + time + " ms; " + win.location.href);
                     }
                     else
-                        FBTrace.sysout("disappeared after "+ time + " ms");
+                        FBTrace.sysout("disappeared after "+ time + " ms" + win.location.href);
                 }).call(this);
             }
             FBTrace.sysout("exposedConsole "+win.location.href, this.getExposedConsole(win));
