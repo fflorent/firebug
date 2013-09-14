@@ -15,7 +15,7 @@ const Cc = Components.classes;
 const Ci = Components.interfaces;
 const Cu = Components.utils;
 
-const EXPOSED_CONSOLE_KEY = "fbConsoleExposed"+Math.random();
+const EXPOSED_CONSOLE_KEY = "fbConsoleExposed" + Math.random();
 
 // ********************************************************************************************* //
 // Console Injector
@@ -59,26 +59,51 @@ Firebug.Console.injector =
             var getConsoleWrapper = Cu.evalInSandbox(expr, sandbox);
             var exposedConsole = getConsoleWrapper(console);
 
+            // xxxFlorent-Test: to be tested with http://jsfiddle.net/ekMtZ/embedded/result/
+            // xxxFlorent-Test: detect when win is the iframe (win.location = http://fiddle.jshell.net/ekMtZ/show/light/)
+            var isIframe = win.location.href.indexOf("shell") >= 0;
             // Note: to early to use weakmap's + win.document in case of iframes. So we use an expando.
+
+            // xxxFlorent-Test: attempt to make win[EXPOSED_CONSOLE_KEY] non-writable, 
+            //                  non-configurable for the iframe... But that doesn't work.
             Object.defineProperty(win, EXPOSED_CONSOLE_KEY, {
-                configurable: true,
-                writable: true,
+                configurable: !isIframe,
+                writable: !isIframe,
                 enumerable: false,
                 value: exposedConsole
             });
+            // xxxFlorent-Test: Detect when the property is deleted...
+            //                  Looks like it is quite immediately (~15/30 ms after)
+            if (isIframe)
+            {
+                var date = new Date();
+                (function a()
+                {
+                    var time = (new Date() - date);
+                    if (this.getExposedConsole(win))
+                    {
+                        setTimeout(a.bind(this), 4);
+                        FBTrace.sysout("still okay after " + time + " ms");
+                    }
+                    else
+                        FBTrace.sysout("disappeared after "+ time + " ms");
+                }).call(this);
+            }
+            FBTrace.sysout("exposedConsole "+win.location.href, this.getExposedConsole(win));
             win.wrappedJSObject.console = exposedConsole;
+            // xxxFlorent-Test: Just keep a reference to the iframe to play with it in the FBTrace
+            //                  console.
+            if (isIframe)
+                Firebug.iframe = win;
 
-            if (FBTrace.DBG_CONSOLE)
-                FBTrace.sysout("console.attachConsoleInjector; Firebug console attached to: " +
-                    context.getName());
+            FBTrace.sysout("console.attachConsoleInjector; Firebug console attached to: " +
+                win.location.href);
         }
         catch (ex)
         {
-            if (FBTrace.DBG_ERROR)
-            {
                 FBTrace.sysout("consoleInjector.attachConsoleInjector; exception while injecting",
-                    ex);
-            }
+                    ex.toString());
+                Firebug.iframeExc = win;
         }
     },
 
