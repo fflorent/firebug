@@ -576,7 +576,7 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
 
     onEditorKeyDown: function(event)
     {
-        if (event.ctrlKey && event.keyCode === KeyEvent.DOM_VK_C)
+        if (Events.isControl(event) && event.keyCode === KeyEvent.DOM_VK_C)
         {
             this.copySource();
             event.preventDefault();
