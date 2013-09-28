@@ -108,7 +108,8 @@ SourceEditor.Events =
     mouseMove: "mousemove",
     mouseOut: "mouseout",
     mouseOver: "mouseover",
-    mouseUp: "mouseup"
+    mouseUp: "mouseup",
+    keyDown: "keydown"
 };
 
 // ********************************************************************************************* //

@@ -70,6 +70,7 @@ ScriptView.prototype = Obj.extend(new Firebug.EventSource(),
         this.onMouseOutListener = this.onMouseOut.bind(this);
         this.onGutterClickListener = this.onGutterClick.bind(this);
         this.onMouseUpListener = this.onEditorMouseUp.bind(this);
+        this.onKeyDownListener = this.onEditorKeyDown.bind(this);
         this.onViewportChangeListener = this.onViewportChange.bind(this);
 
         // Initialize source editor.
@@ -100,6 +101,10 @@ ScriptView.prototype = Obj.extend(new Firebug.EventSource(),
         // Hook view body mouse up (for breakpoint condition editor).
         this.editor.addEventListener(SourceEditor.Events.mouseUp,
             this.onMouseUpListener);
+
+        // Hook view body key down (for copy source)
+        this.editor.addEventListener(SourceEditor.Events.keyDown,
+            this.onKeyDownListener);
 
         // Hook scrolling (viewport change).
         this.editor.addEventListener(SourceEditor.Events.viewportChange,
@@ -526,6 +531,13 @@ ScriptView.prototype = Obj.extend(new Firebug.EventSource(),
         Trace.sysout("scripView.onEditorMouseUp;", event);
 
         this.dispatch("onEditorMouseUp", [event]);
+    },
+
+    onEditorKeyDown: function(event)
+    {
+        Trace.sysout("scriptView.onEditorKeyDown; ", [event]);
+
+        this.dispatch("onEditorKeyDown", [event]);
     },
 
     onViewportChange: function(event)

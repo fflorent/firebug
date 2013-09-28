@@ -42,6 +42,8 @@ var {domplate, DIV} = Domplate;
 var TraceError = FBTrace.to("DBG_ERRORS");
 var Trace = FBTrace.to("DBG_SCRIPTPANEL");
 
+var KeyEvent = window.KeyEvent;
+
 // ********************************************************************************************* //
 // Script panel
 
@@ -570,6 +572,15 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
         // and that's why the 'cancel' argument is set to false.
         if (this.editing)
             Editor.stopEditing(false);
+    },
+
+    onEditorKeyDown: function(event)
+    {
+        if (event.ctrlKey && event.keyCode === KeyEvent.DOM_VK_C)
+        {
+            this.copySource();
+            event.preventDefault();
+        }
     },
 
     initializeEditBreakpointCondition: function(lineNo)
