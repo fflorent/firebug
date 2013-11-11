@@ -3,6 +3,7 @@
 define([
     "firebug/lib/trace",
     "firebug/lib/object",
+    "firebug/lib/locale",
     "firebug/debugger/clients/clientProvider",
     "firebug/debugger/stack/stackFrame",
     "firebug/debugger/clients/scopeClient",
@@ -10,7 +11,7 @@ define([
     "firebug/debugger/debuggerLib",
     "firebug/debugger/watch/watchExpression",
 ],
-function (FBTrace, Obj, ClientProvider, StackFrame, ScopeClient, DOMMemberProvider,
+function (FBTrace, Obj, Locale, ClientProvider, StackFrame, ScopeClient, DOMMemberProvider, 
     DebuggerLib, WatchExpression) {
 
 "use strict";
@@ -114,10 +115,13 @@ WatchProvider.prototype = Obj.extend(BaseProvider,
 
         var cache = stackFrame.context.clientCache;
 
+        this.appendFrameResultValueInScope(stackFrame, cache);
+
         // Append 'this' as the first scope. This is not a real 'scope',
         // but useful for debugging.
         var thisScope = cache.getObject(stackFrame.nativeFrame["this"]);
         thisScope.name = "this";
+        thisScope.readOnly = true;
         stackFrame.scopes.push(thisScope);
 
         // Now iterate all parent scopes. This represents the chain of scopes
@@ -125,7 +129,7 @@ WatchProvider.prototype = Obj.extend(BaseProvider,
         var scope = stackFrame.nativeFrame.environment;
         while (scope)
         {
-            stackFrame.scopes.push(new ScopeClient(scope, cache));
+            stackFrame.scopes.push(new ScopeClient(scope, cache, {readOnly: true}));
             scope = scope.parent;
         }
 
@@ -210,6 +214,31 @@ WatchProvider.prototype = Obj.extend(BaseProvider,
             return null;
 
         return DebuggerLib.getObject(this.panel.context, actor);
+    },
+
+    /**
+     * Adds the frame result (<exception> or <return value>) if it exists to the scopes
+     * listed in the watch panel (even if it is not a scope).
+     *
+     * @param {object} stackFrame
+     * @param {object} cache
+     */
+    appendFrameResultValueInScope: function(stackFrame, cache)
+    {
+        var frameResultObj = DebuggerLib.getFrameResultObject(stackFrame.context);
+        if (!frameResultObj || !frameResultObj.type)
+            return;
+
+        var frameResultScope = cache.getObject(frameResultObj.value);
+
+        frameResultScope.name = Locale.$STR("watch.frameResultType." + frameResultObj.type);
+        frameResultScope.isFrameResultValue = true;
+        frameResultScope.readOnly = true;
+
+        Trace.sysout("WatchProvider.appendFrameResultValueInScope; frameResultScope",
+            frameResultScope);
+
+        stackFrame.scopes.push(frameResultScope);
     },
 });
 

@@ -168,6 +168,25 @@
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* Emphasize the completion value. */
+.memberRow.frameResultValueRow {
+    animation: emphasizeFrameResultValue 2s ease;
+}
+
+.memberRow.frameResultValueRow .memberLabel {
+    font-weight: bold;
+}
+
+@keyframes emphasizeFrameResultValue {
+    50% {
+        background-color: #C4F4FF;
+    }
+    100% {
+        background-color: inherit;
+    }
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 .watchEditCell {
     padding: 2px 18px;
