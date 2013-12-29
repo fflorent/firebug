@@ -61,9 +61,6 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 
         this.attachListeners();
 
-        this.dbg = DebuggerLib.getDebuggerForContext(this.context);
-        this.dbg.onEnterFrame = this.onEnterFrame.bind(this);
-
         // Initialize break on exception feature. This must be done only once when the thread
         // client is created not when page reload happens. Note that the same instance of the
         // thread client is used even if the page is reloaded. Otherwise it causes issue 6797
@@ -99,9 +96,35 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             }
         }
 
-        delete this.dbg;
+        if (this.dbg)
+            delete this.dbg;
         // Detach client-thread listeners.
         this.detachListeners();
+    },
+
+    /**
+     * Singleton to get the Debugger Object.
+     */
+    getDebugger: function()
+    {
+        if (!this.dbg)
+            this.dbg = DebuggerLib.getDebuggerForContext(this.context);
+        return this.dbg;
+    },
+
+    /**
+     * If enabled = true, enable the onEnterFrame callback for BreakOnNext.
+     * Otherwise, disable it to avoid performance penalty.
+     *
+     * @param enabled
+     */
+    breakOnNext: function(enabled)
+    {
+        var dbg = this.getDebugger();
+        if (enabled)
+            dbg.onEnterFrame = this.onEnterFrame.bind(this);
+        else
+            dbg.onEnterFrame = undefined;
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

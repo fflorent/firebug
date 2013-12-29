@@ -1119,6 +1119,7 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
     breakOnNext: function(enabled)
     {
         this.context.breakOnNextHook = enabled;
+        this.tool.breakOnNext(enabled);
     },
 
     getBreakOnNextTooltip: function(armed)
