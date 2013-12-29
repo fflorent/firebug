@@ -289,6 +289,19 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    // Debugger Listeners
+
+    onEnterFrame: function(frame)
+    {
+        // Note: for inline event handler, frame.type also equals to "call".
+        if (this.context.breakOnNextHook && frame.type === "call")
+        {
+            Trace.sysout("debuggerTool.onEnterFrame; triggering BreakOnNext");
+            frame.eval("debugger;");
+        }
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     // Stack Frames
 
     framesadded: function()
@@ -492,16 +505,6 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             Trace.sysout("debuggerTool.updateBreakOnErrors; response received:", response);
         });
     },
-
-    onEnterFrame: function(frame)
-    {
-        // Note: for inline event handler, frame.type also equals to "call".
-        if (this.context.breakOnNextHook && frame.type === "call")
-        {
-            Trace.sysout("debuggerTool.onEnterFrame; triggering BreakOnNext");
-            frame.eval("debugger;");
-        }
-    }
 });
 
 // ********************************************************************************************* //
