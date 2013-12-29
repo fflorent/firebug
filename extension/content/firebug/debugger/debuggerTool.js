@@ -495,11 +495,10 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 
     onEnterFrame: function(frame)
     {
-        // Avoid infinite recursion when calling frame.eval("debugger;").
-        var isRecursiveCall = (frame.older === frame);
-        if (this.context.breakOnNextHook && ["eval", "call"].indexOf(frame.type) && !isRecursiveCall)
+        // Note: for inline event handler, frame.type also equals to "call".
+        if (this.context.breakOnNextHook && frame.type === "call")
         {
-            Trace.sysout("DebuggerTool.onEnterFrame; ");
+            Trace.sysout("debuggerTool.onEnterFrame; triggering BreakOnNext");
             frame.eval("debugger;");
         }
     }

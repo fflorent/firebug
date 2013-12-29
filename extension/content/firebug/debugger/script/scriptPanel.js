@@ -1330,7 +1330,10 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
 
     onDebuggerPaused: function()
     {
-        // Reset the break-on-next flag
+        // Reset the break-on-next flag.
+        // Note: this instruction is always executed after DebuggerKeyword.onDebuggerPaused
+        // (in which we prevent the notification to appear for BreakOnNext)
+        // since ScriptPanel is a class and DebuggerKeyword is a unique object.
         this.breakOnNext(false);
     },
 

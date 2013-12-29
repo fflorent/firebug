@@ -62,6 +62,11 @@ var DebuggerKeyword = Obj.extend(Module,
         if (type != "debuggerStatement")
             return;
 
+        // The "Break On Next" feature evals a "debugger" statement. Don't display a notification
+        // for that.
+        if (context.breakOnNextHook)
+            return;
+
         // Ignore 'breakNow' type of break. In this case the type is also 'debuggerStatement'
         // since the debugger keyword is used for break-now logic.
         if (context.breakNowInProgress)
