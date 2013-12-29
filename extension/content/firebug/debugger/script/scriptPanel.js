@@ -1118,10 +1118,7 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
 
     breakOnNext: function(enabled)
     {
-        if (enabled)
-            this.tool.breakOnNext(this.context, true);
-        else
-            this.tool.breakOnNext(this.context, false);
+        this.context.breakOnNextHook = enabled;
     },
 
     getBreakOnNextTooltip: function(armed)
@@ -1329,6 +1326,12 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
         {
             TraceError.sysout("scriptPanel.onStopDebugging; EXCEPTION " + exc, exc);
         }
+    },
+
+    onDebuggerPaused: function()
+    {
+        // Reset the break-on-next flag
+        this.breakOnNext(false);
     },
 
     newSource: function(sourceFile)

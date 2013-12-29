@@ -11,9 +11,10 @@ define([
     "firebug/debugger/stack/stackTrace",
     "firebug/debugger/clients/clientCache",
     "arch/compilationunit",
+    "firebug/debugger/debuggerLib",
 ],
 function (Firebug, FBTrace, Obj, Arr, Options, Tool, StackFrame, StackTrace,
-    ClientCache, CompilationUnit) {
+    ClientCache, CompilationUnit, DebuggerLib) {
 
 "use strict";
 
@@ -60,6 +61,9 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 
         this.attachListeners();
 
+        this.dbg = DebuggerLib.getDebuggerForContext(this.context);
+        this.dbg.onEnterFrame = this.onEnterFrame.bind(this);
+
         // Initialize break on exception feature. This must be done only once when the thread
         // client is created not when page reload happens. Note that the same instance of the
         // thread client is used even if the page is reloaded. Otherwise it causes issue 6797
@@ -95,6 +99,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             }
         }
 
+        delete this.dbg;
         // Detach client-thread listeners.
         this.detachListeners();
     },
@@ -487,6 +492,17 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             Trace.sysout("debuggerTool.updateBreakOnErrors; response received:", response);
         });
     },
+
+    onEnterFrame: function(frame)
+    {
+        // Avoid infinite recursion when calling frame.eval("debugger;").
+        var isRecursiveCall = (frame.older === frame);
+        if (this.context.breakOnNextHook && ["eval", "call"].indexOf(frame.type) && !isRecursiveCall)
+        {
+            Trace.sysout("DebuggerTool.onEnterFrame; ");
+            frame.eval("debugger;");
+        }
+    }
 });
 
 // ********************************************************************************************* //
