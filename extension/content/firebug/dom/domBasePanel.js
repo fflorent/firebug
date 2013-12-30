@@ -492,7 +492,8 @@ Firebug.DOMBasePanel.prototype = Obj.extend(Panel,
             var object = this.getRowObject(row);
             this.context.thisValue = object;
 
-            if (!editValue)
+            // If editValue is not provided (it might be undefined, so test with arguments.length).
+            if (arguments.length === 1)
             {
                 var propValue = this.getRowPropertyValue(row);
 
@@ -564,12 +565,16 @@ Firebug.DOMBasePanel.prototype = Obj.extend(Panel,
 
         var object = this.getRealRowObject(row);
 
-        function success(result, context)
+        function success(result, context, resObj)
         {
             Trace.sysout("domBasePanel.setPropertyValue; evaluate success object[" + name + "]" +
                 " set to type " + typeof result, result);
 
             object[name] = result;
+            // xxxFlorent: That's weird, but to make the completion of onPopFrame work we need
+            // to pass the result of the call of the eval() method. We can't pass {return: result}.
+            if (member.value.isFrameResultValue)
+                context.getTool("debugger").setReturnValue(resObj);
         }
 
         function failure(exc, context)
@@ -588,7 +593,8 @@ Firebug.DOMBasePanel.prototype = Obj.extend(Panel,
             }
         }
 
-        if (object && !(object instanceof StackFrame) && !(typeof(object) === "function"))
+        if (object && (!(object instanceof StackFrame) || member.value.isFrameResultValue)
+            && !(typeof(object) === "function"))
         {
             CommandLine.evaluate(value, this.context, object, this.context.getCurrentGlobal(),
                 success, failure, {noStateChange: true});

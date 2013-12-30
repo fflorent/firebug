@@ -337,7 +337,7 @@ function evaluate(subject, evalMethod, dbgGlobal, context, win, expr, origExpr, 
         return;
     }
 
-    executeInWindowContext(window, onSuccess, [result, context]);
+    executeInWindowContext(window, onSuccess, [result, context, resObj]);
 }
 
 // ********************************************************************************************* //

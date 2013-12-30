@@ -127,6 +127,20 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             dbg.onEnterFrame = undefined;
     },
 
+    setReturnValue: function(returnValue)
+    {
+        var dbg = this.getDebugger();
+        // xxxFlorent: maybe we can pass the frame as a parameter.
+        var frame = dbg.getNewestFrame();
+        if (!frame)
+        {
+            TraceError.sysout("debuggerTool.setReturnValue; newest frame not found");
+            return;
+        }
+        this.context.returnValue = returnValue;
+        frame.onPop = this.onPopFrame.bind(this);
+    },
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     // Listeners
 
@@ -322,6 +336,18 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             Trace.sysout("debuggerTool.onEnterFrame; triggering BreakOnNext");
             frame.eval("debugger;");
         }
+    },
+
+    onPopFrame: function(completionValue)
+    {
+        // If a return value has been provided by the user, change the completion value.
+        if (this.context.returnValue)
+        {
+            completionValue = this.context.returnValue;
+            delete this.context.returnValue;
+        }
+        Trace.sysout("debuggerTool.onPopFrame; replace return value", completionValue);
+        return completionValue;
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -68,7 +68,7 @@ WatchProvider.prototype = Obj.extend(BaseProvider,
     getValue: function(object)
     {
         var localObject = this.getLocalObject(object);
-        if (localObject)
+        if (localObject != null)
             return localObject;
 
         return BaseProvider.getValue.apply(this, arguments);
@@ -225,7 +225,6 @@ WatchProvider.prototype = Obj.extend(BaseProvider,
         var clientObject = cache.getObject(frameResultObj.value);
         clientObject.name = Locale.$STR("watch.frameResultType." + frameResultObj.type);
         clientObject.isFrameResultValue = true;
-        clientObject.readOnly = true;
 
         Trace.sysout("watchProvider.appendFrameResultValueInScope; frameResultScope",
             clientObject);
