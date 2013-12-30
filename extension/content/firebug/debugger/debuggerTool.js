@@ -129,16 +129,25 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 
     setReturnValue: function(returnValue)
     {
+        this.context.returnValue = returnValue;
+    },
+
+    attachOnPopToTopFrame: function()
+    {
         var dbg = this.getDebugger();
         // xxxFlorent: maybe we can pass the frame as a parameter.
         var frame = dbg.getNewestFrame();
         if (!frame)
         {
-            TraceError.sysout("debuggerTool.setReturnValue; newest frame not found");
+            TraceError.sysout("debuggerTool.attachOnPopToTopFrame; newest frame not found");
             return;
         }
-        this.context.returnValue = returnValue;
-        frame.onPop = this.onPopFrame.bind(this);
+        if (frame.onPop)
+        {
+            Trace.sysout("debuggerTool.attachOnPopToTopFrame; frame.onPop already attached");
+            return;
+        }
+        frame.onPop = this.onPopFrame.bind(this, frame);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -291,6 +300,12 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             this.context.evalCallback(this.context, event, packet);
             this.context.evalCallback = null;
         }
+
+        // xxxFlorent: If we attach frame.onPop while we're about to complete the frame execution
+        // (i.e. when we display the frame result value), frame.onPop is not executed.
+        // That's weird because frame.onPop should be executed after (bug?).
+        // So we attach now the top of the frame every time the execution is paused.
+        this.attachOnPopToTopFrame();
     },
 
     resumed: function()
@@ -338,12 +353,22 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
         }
     },
 
-    onPopFrame: function(completionValue)
+    onPopFrame: function(frame, completionValue)
     {
-        // If a return value has been provided by the user, change the completion value.
-        if (this.context.returnValue)
+        if (!completionValue || !completionValue.hasOwnProperty("return"))
         {
-            completionValue = this.context.returnValue;
+            // xxxFlorent: Must be better to make returnValue an expando prop of frame.
+            // So we don't have to worry about deleting it.
+            delete this.context.returnValue;
+            return completionValue;
+        }
+
+        var userReturnValue = this.context.returnValue;
+        // If a return value has been provided by the user, change the completion value.
+        if (userReturnValue != undefined)
+        {
+            // xxxFlorent: That's weird, but we can't simply return {return: userReturnValue}. Bug?
+            completionValue = frame.evalWithBindings("value", {value: userReturnValue});
             delete this.context.returnValue;
         }
         Trace.sysout("debuggerTool.onPopFrame; replace return value", completionValue);

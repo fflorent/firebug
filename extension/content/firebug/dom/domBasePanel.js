@@ -571,10 +571,9 @@ Firebug.DOMBasePanel.prototype = Obj.extend(Panel,
                 " set to type " + typeof result, result);
 
             object[name] = result;
-            // xxxFlorent: That's weird, but to make the completion of onPopFrame work we need
-            // to pass the result of the call of the eval() method. We can't pass {return: result}.
-            if (member.value.isFrameResultValue)
-                context.getTool("debugger").setReturnValue(resObj);
+            // Pass the already wrapped debuggee value.
+            if (member.value.isFrameResultValue && resObj.hasOwnProperty("return"))
+                context.getTool("debugger").setReturnValue(resObj.return);
         }
 
         function failure(exc, context)
