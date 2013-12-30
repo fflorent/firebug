@@ -204,7 +204,7 @@ DebuggerLib.getThreadActor = function(browser)
  */
 DebuggerLib.getDebuggeeGlobalForFrame = function(frame)
 {
-    return frame.actor.threadActor.globalDebugObject;
+    return frame.callee.global;
 }
 
 // ********************************************************************************************* //

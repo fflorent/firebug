@@ -367,8 +367,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
         // If a return value has been provided by the user, change the completion value.
         if (userReturnValue != undefined)
         {
-            // xxxFlorent: That's weird, but we can't simply return {return: userReturnValue}. Bug?
-            completionValue = frame.evalWithBindings("value", {value: userReturnValue});
+            completionValue = {return: userReturnValue};
             delete this.context.returnValue;
         }
         Trace.sysout("debuggerTool.onPopFrame; replace return value", completionValue);
