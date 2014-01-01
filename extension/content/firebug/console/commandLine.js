@@ -817,8 +817,9 @@ function evaluateExpression(execContextType, expr, context, thisValue, targetWin
         if (!currentFrame)
             return;
 
-        var dbg = context.getTool("debugger").getDebugger();
-        var frame = dbg.getNewestFrame();
+        var threadActor = DebuggerLib.getThreadActor(context.browser);
+        var frameActor = currentFrame.getActor();
+        var frame = threadActor._requestFrame(frameActor);
 
         CommandLineExposed.evaluateInFrame(frame, context, win, expr, origExpr,
             onSuccess, onError, options);
