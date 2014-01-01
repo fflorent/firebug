@@ -565,15 +565,14 @@ Firebug.DOMBasePanel.prototype = Obj.extend(Panel,
 
         var object = this.getRealRowObject(row);
 
-        function success(result, context, resObj)
+        function success(result, context)
         {
             Trace.sysout("domBasePanel.setPropertyValue; evaluate success object[" + name + "]" +
                 " set to type " + typeof result, result);
 
             object[name] = result;
-            // Pass the already wrapped debuggee value.
-            if (member.value.isFrameResultValue && resObj.hasOwnProperty("return"))
-                context.getTool("debugger").setReturnValue(resObj.return);
+            if (member.value.isFrameResultValue)
+                context.getTool("debugger").setReturnValue(result);
         }
 
         function failure(exc, context)
