@@ -108,7 +108,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
     getDebugger: function()
     {
         if (!this.dbg)
-            this.dbg = DebuggerLib.getDebuggerForContext(this.context);
+            this.dbg = DebuggerLib.makeDebuggerForContext(this.context);
         return this.dbg;
     },
 
