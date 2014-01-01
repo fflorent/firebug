@@ -246,34 +246,27 @@ var Profiler = Obj.extend(Module,
 
         var sourceFileMap = context.sourceFileMap;
 
-        // Commenting out, it generates too much output in the tracing console.
-        //if (FBTrace.DBG_PROFILER)
-        //{
-        //    for (var url in sourceFileMap)
-        //        FBTrace.sysout("logProfileReport: " + sourceFileMap[url]);
-        //}
-
         context.profiling.enumerateScripts({enumerateScript: function(script)
         {
-            if (script.callCount)
+            if (!script.callCount)
+                return;
+
+            var fileName = Url.getFileName(script.url);
+            if (Firebug.filterSystemURLs && Url.isSystemURL(fileName))
+                return;
+
+            var sourceLink = SourceFile.getSourceLinkForScript(script, context);
+            if (sourceLink && sourceLink.href in sourceFileMap)
             {
-                var fileName = Url.getFileName(script.url);
-                if (!Firebug.filterSystemURLs || !Url.isSystemURL(fileName))
-                {
-                    var sourceLink = SourceFile.toSourceLink(script, context);
-                    if (sourceLink && sourceLink.href in sourceFileMap)
-                    {
-                        var call = new ProfileCall(script, context, script.funcName,
-                            script.callCount, script.totalExecutionTime,
-                            script.totalOwnExecutionTime, script.minExecutionTime,
-                            script.maxExecutionTime, sourceLink);
+                var call = new ProfileCall(script, context, script.funcName,
+                    script.callCount, script.totalExecutionTime,
+                    script.totalOwnExecutionTime, script.minExecutionTime,
+                    script.maxExecutionTime, sourceLink);
 
-                        calls.push(call);
+                calls.push(call);
 
-                        totalCalls += script.callCount;
-                        totalTime += script.totalOwnExecutionTime;
-                    }
-                }
+                totalCalls += script.callCount;
+                totalTime += script.totalOwnExecutionTime;
             }
         }});
 
@@ -433,7 +426,7 @@ Profiler.ProfileTable = domplate(
 
     sort: function(table, colIndex, numerical)
     {
-        sortAscending = function()
+        var sortAscending = function()
         {
             Css.removeClass(header, "sortedDescending");
             Css.setClass(header, "sortedAscending");
@@ -443,9 +436,9 @@ Profiler.ProfileTable = domplate(
 
             for (var i = 0; i < values.length; i++)
                 tbody.appendChild(values[i].row);
-        },
+        };
 
-        sortDescending = function()
+        var sortDescending = function()
         {
           Css.removeClass(header, "sortedAscending");
           Css.setClass(header, "sortedDescending");
@@ -517,13 +510,14 @@ Profiler.ProfileCaption = domplate(Rep,
 Profiler.ProfileCall = domplate(Rep,
 {
     className: "profile",
+    inspectable: false,
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
     tag:
         TR({"class": "focusRow profileRow subFocusRow", "role": "row"},
             TD({"class": "profileCell", "role": "presentation"},
-                FirebugReps.OBJECTLINK("$object|getCallName")
+                Rep.OBJECTLINK("$object|getCallName")
             ),
             TD({"class": "a11yFocus profileCell", "role": "gridcell"}, "$object.callCount"),
             TD({"class": "a11yFocus profileCell", "role": "gridcell"}, "$object.percent%"),
@@ -587,16 +581,7 @@ Profiler.ProfileCall = domplate(Rep,
 
     getContextMenuItems: function(call, target, context)
     {
-        // XXX This code used to grab a dummy function object off the JSD1 script,
-        // and use it to generate a function-specific context menu. This is both
-        // broken (you can get Firefox crashes from calling the function) and
-        // impossible in a JSD2 world. We need some code for generating context
-        // menus from Debugger.Script's here.
-
-        /*
-        var fn = Wrapper.unwrapIValue(call.script.functionObject);
-        return FirebugReps.Func.getContextMenuItems(fn, call.script, context);
-        */
+        return FirebugReps.Func.getScriptContextMenuItems(context, call.script, call.funcName);
     }
 });
 

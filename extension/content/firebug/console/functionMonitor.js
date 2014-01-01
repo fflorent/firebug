@@ -1,26 +1,25 @@
 /* See license.txt for terms of usage */
 
 define([
+    "firebug/lib/trace",
+    "firebug/lib/css",
+    "firebug/lib/dom",
+    "firebug/lib/domplate",
+    "firebug/lib/events",
+    "firebug/lib/locale",
+    "firebug/lib/object",
+    "firebug/lib/url",
     "firebug/chrome/module",
     "firebug/chrome/rep",
-    "firebug/lib/trace",
-    "firebug/lib/object",
-    "firebug/lib/domplate",
-    "firebug/chrome/reps",
     "firebug/debugger/stack/stackFrame",
     "firebug/debugger/stack/stackFrameRep",
     "firebug/debugger/script/sourceFile",
-    "firebug/lib/events",
-    "firebug/lib/css",
-    "firebug/lib/dom",
-    "firebug/lib/url",
-    "firebug/lib/locale",
     "firebug/debugger/debuggerLib",
     "firebug/debugger/breakpoints/breakpointStore",
     "firebug/debugger/stack/stackTrace",
 ],
-function(Module, Rep, FBTrace, Obj, Domplate, Reps, StackFrame, StackFrameRep, SourceFile, Events,
-    Css, Dom, Url, Locale, DebuggerLib, BreakpointStore, StackTrace) {
+function(FBTrace, Css, Dom, Domplate, Events, Locale, Obj, Url, Module, Rep, StackFrame,
+    StackFrameRep, SourceFile, DebuggerLib, BreakpointStore, StackTrace) {
 
 "use strict";
 
@@ -36,7 +35,7 @@ var {domplate, A, SPAN, FOR, TAG, DIV} = Domplate;
 // Function Monitor
 
 /**
- * @module The modules implements 'debug', 'undebug', 'monitor' and 'unmonitor' commands.
+ * @module The module implements the 'debug', 'undebug', 'monitor' and 'unmonitor' commands.
  */
 var FunctionMonitor = Obj.extend(Module,
 /** @lends FunctionMonitor */
@@ -101,7 +100,7 @@ var FunctionMonitor = Obj.extend(Module,
             var script = SourceFile.findScriptForFunctionInContext(context, fn);
             if (script)
             {
-                this.monitorScript(context, fn, script, mode);
+                this.monitorScript(context, script, mode);
             }
             else
             {
@@ -123,54 +122,50 @@ var FunctionMonitor = Obj.extend(Module,
         {
             var script = SourceFile.findScriptForFunctionInContext(context, fn);
             if (script)
-                this.unmonitorScript(context, fn, script, mode);
+                this.unmonitorScript(context, script, mode);
         }
     },
 
-    monitorScript: function(context, fn, script, mode)
+    monitorScript: function(context, script, mode)
     {
-        var script = SourceFile.findScriptForFunctionInContext(context, fn);
-        if (script)
-        {
-            Trace.sysout("functionMonitor.monitorScript; " + script.url + ", " +
-                script.startLine, fn);
+        Trace.sysout("functionMonitor.monitorScript; " + script.url + ", " +
+            script.startLine);
 
-            var location = {line: script.startLine, url: script.url};
+        var location = {line: script.startLine, url: script.url};
 
-            // If the first line of the script contains no code, slide down to
-            // the nextline that has runnable code.
-            location = DebuggerLib.getNextExecutableLine(context, location);
+        // If the first line of the script contains no code, slide down to
+        // the next line that has runnable code.
+        location = DebuggerLib.getNextExecutableLine(context, location);
 
-            var type = this.getBreakpointType(mode);
-            BreakpointStore.addBreakpoint(location.url, location.line - 1, type);
-        }
+        var type = this.getBreakpointType(mode);
+        BreakpointStore.addBreakpoint(location.url, location.line - 1, null, type);
     },
 
-    unmonitorScript: function(context, fn, script, mode)
+    unmonitorScript: function(context, script, mode)
     {
-        var script = SourceFile.findScriptForFunctionInContext(context, fn);
-        if (script)
-        {
-            Trace.sysout("functionMonitor.unmonitorScript; " + script.url + ", " +
-                script.startLine, fn);
+        Trace.sysout("functionMonitor.unmonitorScript; " + script.url + ", " +
+            script.startLine);
 
-            var location = {line: script.startLine, url: script.url};
-            location = DebuggerLib.getNextExecutableLine(context, location);
+        var location = {line: script.startLine, url: script.url};
+        location = DebuggerLib.getNextExecutableLine(context, location);
 
-            var type = this.getBreakpointType(mode);
-            BreakpointStore.removeBreakpoint(location.url, location.line - 1, type);
-        }
+        var type = this.getBreakpointType(mode);
+        BreakpointStore.removeBreakpoint(location.url, location.line - 1, type);
     },
 
     getBreakpointType: function(mode)
     {
-        return (mode == "monitor") ? BreakpointStore.BP_MONITOR : BreakpointStore.BP_NORMAL;
+        return (mode === "monitor" ? BreakpointStore.BP_MONITOR : BreakpointStore.BP_NORMAL);
     },
 
-    isMonitored: function(url, lineNo)
+    isScriptMonitored: function(context, script)
     {
-        var bp = lineNo != -1 ? BreakpointStore.findBreakpoint(url, lineNo) : null;
-        return bp && bp.type & BreakpointStore.BP_MONITOR;
+        var location = {line: script.startLine, url: script.url};
+        location = DebuggerLib.getNextExecutableLine(context, location);
+        if (!location)
+            return false;
+        var type = BreakpointStore.BP_MONITOR;
+        return BreakpointStore.findBreakpoint(location.url, location.line - 1, type) != null;
     },
 
     clearMonitorBreakpoint: function(url, line)
@@ -194,10 +189,11 @@ function FunctionLog(frame, stackTrace)
 var FunctionMonitorRep = domplate(Rep,
 {
     className: "functionCall",
+    inspectable: false,
 
     // xxxHonza: StackFrameRep duplication
     tag:
-        Reps.OBJECTBLOCK({$hasTwisty: "$object|hasStackTrace", _repObject: "$object",
+        Rep.OBJECTBLOCK({$hasTwisty: "$object|hasStackTrace", _repObject: "$object",
             onclick: "$onToggleStackTrace"},
             A({"class": "objectLink functionCallTitle a11yFocus", _repObject: "$object"},
                 "$object|getCallName"
@@ -300,6 +296,12 @@ var FunctionMonitorRep = domplate(Rep,
 
 // ********************************************************************************************* //
 // CommandLine Support
+
+// XXX Move the validation in {,un}monitorFunction into the command line functions -
+// internal functions shouldn't print to the console. E.g. currently "monitor(1)" prints
+// (i) Firebug.Debugger.monitorFunction requires a function 1
+// (i) Monitor created for (null).
+// which is wrong in so many ways...
 
 function debug(context, args)
 {
