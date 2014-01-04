@@ -396,16 +396,33 @@ DebuggerLib.getFrameResultObject = function(context)
 // ********************************************************************************************* //
 // Debugger
 
-DebuggerLib.breakNow = function(context)
+
+/**
+ * Breaks the debugger in the current frame (if the execution is stopped) or in the debuggee global.
+ * Should not be used directly. Instead use Debugger.breakNow()
+ *
+ * @param {*} context
+ * @param {Debugger.Frame or Debugger.Object} [scope] The scope in which the execution is halted
+ *        (default is the debuggee global)
+ */
+DebuggerLib.breakNow = function(context, scope)
 {
-    // getInactiveDebuggeeGlobal uses the current global (i.e. stopped frame, current
-    // iframe or top level window associated with the context object).
-    // There can be cases (e.g. BON XHR) where the current window is an iframe, but
-    // the event the debugger breaks on - comes from top level window (or vice versa).
-    // For now there are not known problems, but we might want to use the second
-    // argument of the getInactiveDebuggeeGlobal() and pass explicit global object.
-    var dbgGlobal = this.getInactiveDebuggeeGlobal(context);
-    return dbgGlobal.evalInGlobal("debugger");
+    if (scope && scope instanceof global.Debugger.Frame)
+    {
+        return scope.eval("debugger");
+    }
+    else
+    {
+        // getDebugeeGlobal uses the current global (i.e. stopped frame, current iframe or
+        // top level window associated with the context object).
+        // There can be cases (e.g. BON XHR) where the current window is an iframe, but
+        // the event the debugger breaks on - comes from top level window (or vice versa).
+        // For now there are not known problems, but we might want to use the second
+        // argument of the getDebuggeeGlobal() and pass explicit global object.
+        if (!scope)
+            scope = this.getDebuggeeGlobal(context);
+        return dbgGlobal.evalInGlobal("debugger");
+    }
 };
 
 DebuggerLib.makeDebugger = function()

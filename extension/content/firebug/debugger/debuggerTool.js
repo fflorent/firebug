@@ -12,9 +12,10 @@ define([
     "firebug/debugger/clients/clientCache",
     "arch/compilationunit",
     "firebug/debugger/debuggerLib",
+    "firebug/debugger/debugger",
 ],
 function (Firebug, FBTrace, Obj, Arr, Options, Tool, StackFrame, StackTrace,
-    ClientCache, CompilationUnit, DebuggerLib) {
+    ClientCache, CompilationUnit, DebuggerLib, Debugger) {
 
 "use strict";
 
@@ -317,10 +318,12 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
     onEnterFrame: function(frame)
     {
         // Note: for inline event handler, frame.type also equals to "call".
-        if (this.context.breakOnNextHook && frame.type === "call")
+        if (frame.type === "call")
         {
             Trace.sysout("debuggerTool.onEnterFrame; triggering BreakOnNext");
-            frame.eval("debugger;");
+            // Note: Break On Next (and the onEnterFrame callback) will be disabled in
+            // ScriptPanel.prototype.onStartDebugging, called when the debugger is paused.
+            Debugger.breakNow(this.context, frame);
         }
     },
 

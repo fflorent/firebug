@@ -74,6 +74,7 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
     breakable: true,
     enableA11y: true,
     order: 40,
+    breakOnNextActivated: false,
 
     // {@link StatusPath} UI component that displays call-stack in the toolbar will be
     // updated asynchronously.
@@ -1118,8 +1119,11 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
 
     breakOnNext: function(enabled)
     {
-        this.context.breakOnNextHook = enabled;
-        this.tool.breakOnNext(enabled);
+        if (this.breakOnNextActivated !== enabled)
+        {
+            this.breakOnNextActivated = enabled;
+            this.tool.breakOnNext(enabled);
+        }
     },
 
     getBreakOnNextTooltip: function(armed)
@@ -1130,7 +1134,7 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
 
     shouldBreakOnNext: function()
     {
-        return !!this.context.breakOnNextHook;  // TODO BTI
+        return !!this.breakOnNextActivated ;  // TODO BTI
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -1277,6 +1281,9 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
 
             this.syncCommands(this.context);
             this.syncListeners(this.context);
+
+            // Disable Break On Next if it was activated.
+            this.breakOnNext(false);
 
             // Update Break on Next lightning
             //Firebug.Breakpoint.updatePanelTab(this, false);
