@@ -178,17 +178,21 @@ SourceFile.getSourceFileByUrl = function(context, url)
 
 SourceFile.findScriptForFunctionInContext = function(context, fn)
 {
-    var dbg = DebuggerLib.getDebuggerForContext(context);
-    var dbgGlobal = dbg.addDebuggee(context.getCurrentGlobal());
-    var dbgFn = dbgGlobal.makeDebuggeeValue(fn);
+    var dbgGlobal = DebuggerLib.getDebuggerDebuggeeGlobalForContext(context);
+    if (!dbgGlobal)
+    {
+        Trace.sysout("sourceFile.findScriptForFunctionInContext; no debugger");
+        return null;
+    }
 
+    var dbgFn = dbgGlobal.makeDebuggeeValue(fn).unwrap();
     if (!dbgFn || !dbgFn.script)
     {
-        TraceError.sysout("sourceFile.findScriptForFunctionInContext; ERROR no script?", {
+        // This happens e.g. for native functions.
+        Trace.sysout("sourceFile.findScriptForFunctionInContext; no script", {
             fn: fn,
             dbgFn: dbgFn,
         });
-
         return null;
     }
 
@@ -198,17 +202,14 @@ SourceFile.findScriptForFunctionInContext = function(context, fn)
 SourceFile.findSourceForFunction = function(fn, context)
 {
     var script = SourceFile.findScriptForFunctionInContext(context, fn);
-    return script ? SourceFile.toSourceLink(script, context) : null;
+    return script ? SourceFile.getSourceLinkForScript(script, context) : null;
 };
 
-SourceFile.toSourceLink = function(script, context)
+SourceFile.getSourceLinkForScript = function(script, context)
 {
     var sourceLink = new SourceLink(script.url, script.startLine, "js");
     return sourceLink;
 };
-
-//xxxHonza: Back compatibility, do we need this?
-SourceFile.getSourceLinkForScript = SourceFile.toSourceLink;
 
 // ********************************************************************************************* //
 

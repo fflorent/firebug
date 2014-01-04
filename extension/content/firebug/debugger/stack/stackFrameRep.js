@@ -11,13 +11,12 @@ define([
     "firebug/lib/domplate",
     "firebug/debugger/stack/stackFrame",
     "firebug/chrome/rep",
-    "firebug/chrome/reps",
     "firebug/debugger/script/sourceLink",
     "firebug/lib/css",
     "firebug/lib/options",
     "firebug/lib/dom",
 ],
-function(FBTrace, Obj, Arr, Url, Str, Locale, Firebug, Domplate, StackFrame, Rep, FirebugReps,
+function(FBTrace, Obj, Arr, Url, Str, Locale, Firebug, Domplate, StackFrame, Rep,
     SourceLink, Css, Options, Dom) {
 
 // ********************************************************************************************* //
@@ -34,9 +33,10 @@ const Ci = Components.interfaces;
 var StackFrameRep = domplate(Rep,
 {
     className: "stackFrame",
+    inspectable: false,
 
     tag:
-        FirebugReps.OBJECTBLOCK({$hasTwisty: "$object|hasArguments", _repObject: "$object",
+        Rep.OBJECTBLOCK({$hasTwisty: "$object|hasArguments", _repObject: "$object",
             onclick: "$onToggleArguments"},
             SPAN({"class": "stackFrameMarker"}, ""),
             A({"class": "objectLink a11yFocus", _repObject: "$object"}, "$object|getCallName"),

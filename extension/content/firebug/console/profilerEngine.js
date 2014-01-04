@@ -43,23 +43,23 @@ ProfilerEngine.prototype =
     startProfiling: function()
     {
         // Collected profiling results are stored per 'script'.
-        this.scripts = new Array();
+        this.scripts = [];
 
         // Total profiling time (total executing time of the first executed frame).
         this.startTime = null;
         this.endTime = null;
 
-        // Get debugger for the current context (top level window and all iframes).
-        this.dbg = DebuggerLib.getDebuggerForContext(this.context);
+        // Get a debugger for the current context (top level window and all iframes).
+        this.dbg = DebuggerLib.makeDebuggerForContext(this.context);
 
-        // Hook function calls
+        // Hook function calls.
         this.dbg.onEnterFrame = this.onEnterFrame.bind(this);
     },
 
     stopProfiling: function()
     {
-        // Remove debugger hook.
-        this.dbg.onEnterFrame = undefined;
+        DebuggerLib.destroyDebuggerForContext(this.context, this.dbg);
+        this.dbg = null;
 
         Trace.sysout("profilerEngine.stopProfiling;", this.scripts);
 
