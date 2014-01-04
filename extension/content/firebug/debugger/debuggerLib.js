@@ -407,21 +407,21 @@ DebuggerLib.getFrameResultObject = function(context)
  */
 DebuggerLib.breakNow = function(context, scope)
 {
-    if (scope && scope instanceof global.Debugger.Frame)
+    if (Object.prototype.toString.call(scope) === "[object Frame]")
     {
-        return scope.eval("debugger");
+        return scope.eval("debugger;");
     }
     else
     {
-        // getDebugeeGlobal uses the current global (i.e. stopped frame, current iframe or
-        // top level window associated with the context object).
+        // getInactiveDebuggeeGlobal uses the current global (i.e. stopped frame, current
+        // iframe or top level window associated with the context object).
         // There can be cases (e.g. BON XHR) where the current window is an iframe, but
         // the event the debugger breaks on - comes from top level window (or vice versa).
         // For now there are not known problems, but we might want to use the second
-        // argument of the getDebuggeeGlobal() and pass explicit global object.
+        // argument of the getInactiveDebuggeeGlobal() and pass explicit global object.
         if (!scope)
             scope = this.getDebuggeeGlobal(context);
-        return dbgGlobal.evalInGlobal("debugger");
+        return dbgGlobal.evalInGlobal("debugger;");
     }
 };
 
