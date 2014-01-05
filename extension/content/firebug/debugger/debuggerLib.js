@@ -398,18 +398,18 @@ DebuggerLib.getFrameResultObject = function(context)
 
 
 /**
- * Breaks the debugger in the current frame (if the execution is stopped) or in the debuggee global.
+ * Breaks the debugger in the newest frame (if any) or in the debuggee global.
  * Should not be used directly. Instead use Debugger.breakNow()
  *
  * @param {*} context
- * @param {Debugger.Frame or Debugger.Object} [scope] The scope in which the execution is halted
- *        (default is the debuggee global)
  */
-DebuggerLib.breakNow = function(context, scope)
+DebuggerLib.breakNow = function(context)
 {
-    if (Object.prototype.toString.call(scope) === "[object Frame]")
+    var actor = DebuggerLib.getThreadActor(context.browser);
+    var frame = actor.dbg.getNewestFrame();
+    if (frame)
     {
-        return scope.eval("debugger;");
+        return frame.eval("debugger;");
     }
     else
     {
@@ -419,8 +419,7 @@ DebuggerLib.breakNow = function(context, scope)
         // the event the debugger breaks on - comes from top level window (or vice versa).
         // For now there are not known problems, but we might want to use the second
         // argument of the getInactiveDebuggeeGlobal() and pass explicit global object.
-        if (!scope)
-            scope = this.getDebuggeeGlobal(context);
+        var dbgGlobal = this.getDebuggeeGlobal(context);
         return dbgGlobal.evalInGlobal("debugger;");
     }
 };

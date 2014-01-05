@@ -415,15 +415,13 @@ Firebug.Debugger = Obj.extend(ActivableModule,
     },
 
     /**
-     * Breaks the debugger in the passed frame or in the debuggee global.
+     * Breaks the debugger in the newest frame (if any) or in the debuggee global.
      *
      * @param {*} context
-     * @param {Debugger.Frame or Debugger.Object} [scope] The scope in which the execution is halted
-     *        (default is the debuggee global)
      */
-    breakNow: function(context, scope)
+    breakNow: function(context)
     {
-        DebuggerHalter.breakNow(context, scope);
+        DebuggerHalter.breakNow(context);
     },
 
     stop: function(context, frame, type, rv)

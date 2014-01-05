@@ -65,7 +65,7 @@ var DebuggerHalter = Obj.extend(Module,
         // breakNow halts this event loop so, even if the pause
         // is asynchronous, the current loop needs to wait till it's resumed.
         // So, the list of frames is actually get synchronously.
-        this.breakNow(context, null, function()
+        this.breakNow(context, function()
         {
             var frames = DebuggerLib.getCurrentFrames(context);
             stackTrace = StackTrace.buildStackTrace(context, frames);
@@ -124,7 +124,7 @@ var DebuggerHalter = Obj.extend(Module,
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     // Public API
 
-    breakNow: function(context, scope, callback)
+    breakNow: function(context, callback)
     {
         Trace.sysout("debuggerHalter.breakNow; " + context.getName());
 
@@ -132,7 +132,7 @@ var DebuggerHalter = Obj.extend(Module,
         context.breakNowCallback = callback;
         context.breakNowInProgress = true;
 
-        DebuggerLib.breakNow(context, scope);
+        DebuggerLib.breakNow(context);
     }
 });
 
