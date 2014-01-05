@@ -74,6 +74,7 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
     breakable: true,
     enableA11y: true,
     order: 40,
+    breakOnNextActivated: false,
 
     // {@link StatusPath} UI component that displays call-stack in the toolbar will be
     // updated asynchronously.
@@ -183,13 +184,13 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
         }
 
         // These buttons are visible only, if debugger is enabled.
+        this.showToolbarButtons("fbBonButtons", active);
         this.showToolbarButtons("fbLocationSeparator", active);
         this.showToolbarButtons("fbDebuggerButtons", active);
         this.showToolbarButtons("fbLocationButtons", active);
         this.showToolbarButtons("fbScriptButtons", active);
         this.showToolbarButtons("fbStatusButtons", active);
         this.showToolbarButtons("fbLocationList", active);
-        this.showToolbarButtons("fbToolbar", active);
 
         // Additional debugger panels are visible only, if debugger is active and only
         // if they aren't explicitly hidden.
@@ -875,7 +876,7 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
 
         // Remove breakpoint from the UI.
         this.scriptView.removeBreakpoint(bp);
-        if (this.scriptView.editor.debugLocation == bp.lineNo)
+        if (this.scriptView.editor && this.scriptView.editor.debugLocation == bp.lineNo)
             this.scriptView.setDebugLocation(bp.lineNo);
     },
 
@@ -1118,8 +1119,11 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
 
     breakOnNext: function(enabled)
     {
-        this.context.breakOnNextHook = enabled;
-        this.tool.breakOnNext(enabled);
+        if (this.breakOnNextActivated !== enabled)
+        {
+            this.breakOnNextActivated = enabled;
+            this.tool.breakOnNext(enabled);
+        }
     },
 
     getBreakOnNextTooltip: function(armed)
@@ -1130,7 +1134,7 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
 
     shouldBreakOnNext: function()
     {
-        return !!this.context.breakOnNextHook;  // TODO BTI
+        return !!this.breakOnNextActivated ;  // TODO BTI
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -1277,6 +1281,9 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
 
             this.syncCommands(this.context);
             this.syncListeners(this.context);
+
+            // Disable Break On Next if it was activated.
+            this.breakOnNext(false);
 
             // Update Break on Next lightning
             //Firebug.Breakpoint.updatePanelTab(this, false);
