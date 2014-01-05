@@ -140,15 +140,17 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             TraceError.sysout("debuggerTool.setReturnValue; newest frame not found");
             return;
         }
+
+        wmUserReturnValues.set(frame, userReturnValue);
+
         if (frame.onPop)
         {
             Trace.sysout("debuggerTool.attachOnPopToTopFrame; frame.onPop already attached");
             return;
         }
 
-        wmUserReturnValues.set(frame, userReturnValue);
         // Note: userReturnValue is not a grip, so undefined and null are valid values.
-        frame.onPop = this.onPopFrame.bind(this, frame, userReturnValue);
+        frame.onPop = this.onPopFrame.bind(this, frame);
     },
 
     /**
@@ -395,10 +397,12 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
         }
     },
 
-    onPopFrame: function(frame, userReturnValue, completionValue)
+    onPopFrame: function(frame, completionValue)
     {
         if (!completionValue || !completionValue.hasOwnProperty("return"))
             return completionValue;
+
+        var userReturnValue = wmUserReturnValues.get(frame);
 
         var wrappedUserReturnValue = frame.callee.global.makeDebuggeeValue(userReturnValue);
         return {"return": wrappedUserReturnValue};
