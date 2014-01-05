@@ -821,7 +821,39 @@ WatchPanel.prototype = Obj.extend(BasePanel,
         else
             this.defaultTree.saveState(this.defaultToggles);
 
-        BasePanel.setPropertyValue.apply(this, arguments);
+        var member = row.domObject;
+        if (member && member.value && member.value.isFrameResultValue)
+            this.setPropertyReturnValue(member, value);
+        else
+            BasePanel.setPropertyValue.apply(this, arguments);
+    },
+
+    setPropertyReturnValue: function(member, value)
+    {
+        var onSuccess = (result, context) =>
+        {
+            Trace.sysout("watchPanel.setPropertyReturnValue; evaluate success", result);
+            this.tool.setUserReturnValue(result);
+        };
+
+        var onFailure = (exc, context) =>
+        {
+            Trace.sysout("watchPanel.setPropertyReturnValue; evaluation FAILED " + exc, exc);
+            try
+            {
+                // See DomBasePanel.setPropertyValue for the explanation.
+                this.tool.setUserReturnValue(value);
+            }
+            catch (exc)
+            {
+            }
+        };
+
+        var options = {noStateChange: true};
+        CommandLine.evaluate(value, this.context, null, null, onSuccess, onFailure, options);
+
+        this.refresh();
+        this.markChange();
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

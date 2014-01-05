@@ -26,6 +26,10 @@ var TraceError = FBTrace.to("DBG_ERRORS");
 var Trace = FBTrace.to("DBG_DEBUGGERTOOL");
 
 // ********************************************************************************************* //
+// Variables
+var wmUserReturnValues = new WeakMap();
+
+// ********************************************************************************************* //
 // Debugger Tool
 
 function DebuggerTool(context)
@@ -128,19 +132,12 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             dbg.onEnterFrame = undefined;
     },
 
-    setReturnValue: function(returnValue)
+    setUserReturnValue: function(userReturnValue)
     {
-        this.context.returnValue = returnValue;
-    },
-
-    attachOnPopToTopFrame: function()
-    {
-        var dbg = this.getDebugger();
-        // xxxFlorent: maybe we can pass the frame as a parameter.
-        var frame = dbg.getNewestFrame();
+        var frame = this.getDebugger().getNewestFrame();
         if (!frame)
         {
-            TraceError.sysout("debuggerTool.attachOnPopToTopFrame; newest frame not found");
+            TraceError.sysout("debuggerTool.setReturnValue; newest frame not found");
             return;
         }
         if (frame.onPop)
@@ -148,7 +145,48 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             Trace.sysout("debuggerTool.attachOnPopToTopFrame; frame.onPop already attached");
             return;
         }
-        frame.onPop = this.onPopFrame.bind(this, frame);
+
+        wmUserReturnValues.set(frame, userReturnValue);
+        // Note: userReturnValue is not a grip, so undefined and null are valid values.
+        frame.onPop = this.onPopFrame.bind(this, frame, userReturnValue);
+    },
+
+    /**
+     * Returns the return value set by the user, as follow:
+     * - If there is no return value, return {"found": false}
+     * - If there is, return an object of this form: {"userReturnValue": returnValue, "found": true}
+     *
+     * Note that the return value can be null or undefined. That's why an object is returned
+     * in any case with the "found" property.
+     *
+     * @return {Object} The object has described above.
+     */
+    getUserReturnValue: function()
+    {
+        var frame = this.getDebugger().getNewestFrame();
+        if (!frame || !wmUserReturnValues.has(frame))
+            return {"found": false};
+
+        var userReturnValue = wmUserReturnValues.get(frame);
+
+        return {"found": true, "userReturnValue": userReturnValue};
+    },
+
+    /**
+     * Gets the return value set by the user as a Grip, or null if not found.
+     * Note: if the user has set it to null, the grip would be {type: "null"}.
+     *
+     * @return {Grip} The return value grip or null if not found.
+     */
+    getUserReturnValueAsGrip: function()
+    {
+        var {userReturnValue, found} = this.getUserReturnValue();
+        if (!found)
+            return null;
+
+        var dbgGlobal = DebuggerLib.getThreadActor(this.context.browser).globalDebugObject;
+        var dbgUserReturnValue = dbgGlobal.makeDebuggeeValue(userReturnValue);
+        return DebuggerLib.createValueGrip(this.context, dbgUserReturnValue);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -302,11 +340,12 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             this.context.evalCallback = null;
         }
 
-        // xxxFlorent: If we attach frame.onPop while we're about to complete the frame execution
-        // (i.e. when we display the frame result value), frame.onPop is not executed.
-        // That's weird because frame.onPop should be executed after (bug?).
-        // So we attach now the top of the frame every time the execution is paused.
-        this.attachOnPopToTopFrame();
+        // getNewestFrame() is a Singleton that creates a Frame object (if not done before) and
+        // returns it. We need to force that Frame object to be created now because the debugger
+        // fetches only the instances that have been created to call the "onPop" handlers. So when
+        // calling setReturnValue, it is too late to create that Frame object.
+        // Also see: http://ur1.ca/gc9dy
+        this.getDebugger().getNewestFrame();
     },
 
     resumed: function()
@@ -356,27 +395,13 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
         }
     },
 
-    onPopFrame: function(frame, completionValue)
+    onPopFrame: function(frame, userReturnValue, completionValue)
     {
         if (!completionValue || !completionValue.hasOwnProperty("return"))
-        {
-            // xxxFlorent: Must be better to make returnValue an expando prop of frame.
-            // So we don't have to worry about deleting it.
-            delete this.context.returnValue;
             return completionValue;
-        }
 
-        var userReturnValue = this.context.returnValue;
-        // If a return value has been provided by the user, change the completion value.
-        if (userReturnValue != undefined)
-        {
-            // xxxFlorent: That's weird, but we can't simply return {return: userReturnValue}. Bug?
-            var wrappedReturnValue = frame.callee.global.makeDebuggeeValue(userReturnValue);
-            completionValue = {return: wrappedReturnValue};
-            delete this.context.returnValue;
-        }
-        Trace.sysout("debuggerTool.onPopFrame; replace return value", completionValue);
-        return completionValue;
+        var wrappedUserReturnValue = frame.callee.global.makeDebuggeeValue(userReturnValue);
+        return {"return": wrappedUserReturnValue};
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

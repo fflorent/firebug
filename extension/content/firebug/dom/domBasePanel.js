@@ -492,8 +492,7 @@ Firebug.DOMBasePanel.prototype = Obj.extend(Panel,
             var object = this.getRowObject(row);
             this.context.thisValue = object;
 
-            // If editValue is not provided (it might be undefined, so test with arguments.length).
-            if (arguments.length === 1)
+            if (!editValue)
             {
                 var propValue = this.getRowPropertyValue(row);
 
@@ -571,13 +570,11 @@ Firebug.DOMBasePanel.prototype = Obj.extend(Panel,
                 " set to type " + typeof result, result);
 
             object[name] = result;
-            if (member.value.isFrameResultValue)
-                context.getTool("debugger").setReturnValue(result);
         }
 
         function failure(exc, context)
         {
-            Trace.sysout("domBasePanel.setPropertyValue; evaluate FAILED " + exc, exc);
+            Trace.sysout("domBasePanel.setPropertyValue; evaluation FAILED " + exc, exc);
 
             try
             {
@@ -591,11 +588,10 @@ Firebug.DOMBasePanel.prototype = Obj.extend(Panel,
             }
         }
 
-        if (object && (!(object instanceof StackFrame) || member.value.isFrameResultValue)
-            && !(typeof(object) === "function"))
+        if (object && !(object instanceof StackFrame) && typeof(object) !== "function")
         {
-            CommandLine.evaluate(value, this.context, object, this.context.getCurrentGlobal(),
-                success, failure, {noStateChange: true});
+            CommandLine.evaluate(value, this.context, object, null, success, failure,
+                {noStateChange: true});
         }
         else if (this.context.stopped)
         {

@@ -431,7 +431,7 @@ DomBaseTree.prototype = domplate(BaseTree,
                 if (typeof(value) == "boolean")
                     panel.setPropertyValue(row, "" + !value);
                 else
-                    panel.editProperty(row, value);
+                    panel.editProperty(row);
 
                 Events.cancelEvent(event);
             }

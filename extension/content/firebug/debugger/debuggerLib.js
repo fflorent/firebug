@@ -221,6 +221,12 @@ DebuggerLib.getDebuggerDebuggeeGlobalForContext = function(context, global)
     return dbgGlobal.makeDebuggeeValue(global).unwrap().global;
 };
 
+DebuggerLib.createValueGrip = function(context, value)
+{
+    var actor = DebuggerLib.getThreadActor(context.browser);
+    return actor.createValueGrip(value);
+};
+
 // ********************************************************************************************* //
 // Frames
 

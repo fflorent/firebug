@@ -216,7 +216,19 @@ WatchProvider.prototype = Obj.extend(BaseProvider,
      */
     getFrameResultClientObject: function(stackFrame, cache)
     {
-        var frameResultObj = DebuggerLib.getFrameResultObject(stackFrame.context);
+        var frameResultObj = null;
+
+        var debuggerTool = stackFrame.context.getTool("debugger");
+        // Note: It returns null iif the value is not found (null is not a valid grip).
+        var userReturnValue = debuggerTool.getUserReturnValueAsGrip();
+
+        if (userReturnValue == null)
+            frameResultObj = DebuggerLib.getFrameResultObject(stackFrame.context);
+        else
+            frameResultObj = {type: "return", value: userReturnValue};
+
+        Trace.sysout("WatchProvider.getFrameResultObject; frameResultObj", frameResultObj);
+
         if (!frameResultObj || !frameResultObj.type)
             return;
 
