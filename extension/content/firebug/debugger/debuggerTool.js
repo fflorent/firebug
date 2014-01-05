@@ -141,6 +141,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             return;
         }
 
+        // Note: userReturnValue is not a grip, so undefined and null are valid values.
         wmUserReturnValues.set(frame, userReturnValue);
 
         if (frame.onPop)
@@ -149,7 +150,6 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             return;
         }
 
-        // Note: userReturnValue is not a grip, so undefined and null are valid values.
         frame.onPop = this.onPopFrame.bind(this, frame);
     },
 

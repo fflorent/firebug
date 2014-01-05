@@ -870,6 +870,15 @@ WatchPanel.prototype = Obj.extend(BasePanel,
         // Unwrapping
         return this.getObjectView(object);
     },
+
+    getRowPropertyValue: function(row)
+    {
+        var member = row.domObject;
+        if (member && member.value && member.value.isFrameResultValue)
+            return this.provider.getValue(member.value);
+
+        return BasePanel.getRowPropertyValue.apply(this, arguments);
+    },
 });
 
 // ********************************************************************************************* //
