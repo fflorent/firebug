@@ -419,7 +419,7 @@ DebuggerLib.breakNow = function(context)
         // the event the debugger breaks on - comes from top level window (or vice versa).
         // For now there are not known problems, but we might want to use the second
         // argument of the getInactiveDebuggeeGlobal() and pass explicit global object.
-        var dbgGlobal = this.getDebuggeeGlobal(context);
+        var dbgGlobal = this.getInactiveDebuggeeGlobal(context);
         return dbgGlobal.evalInGlobal("debugger;");
     }
 };
