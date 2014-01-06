@@ -238,6 +238,9 @@ WatchProvider.prototype = Obj.extend(BaseProvider,
         clientObject.name = Locale.$STR("watch.frameResultType." + frameResultObj.type);
         clientObject.isFrameResultValue = true;
 
+        // Make exceptions readonly.
+        clientObject.readOnly = (frameResultObj.type === "exception");
+
         Trace.sysout("watchProvider.appendFrameResultValueInScope; frameResultScope",
             clientObject);
 
