@@ -7,15 +7,15 @@ define([
     "firebug/lib/array",
     "firebug/lib/options",
     "firebug/chrome/tool",
+    "firebug/debugger/debuggerLib",
+    "firebug/debugger/debugger",
     "firebug/debugger/stack/stackFrame",
     "firebug/debugger/stack/stackTrace",
     "firebug/debugger/clients/clientCache",
     "arch/compilationunit",
-    "firebug/debugger/debuggerLib",
-    "firebug/debugger/debugger",
 ],
-function (Firebug, FBTrace, Obj, Arr, Options, Tool, StackFrame, StackTrace,
-    ClientCache, CompilationUnit, DebuggerLib, Debugger) {
+function (Firebug, FBTrace, Obj, Arr, Options, Tool, DebuggerLib, Debugger, StackFrame, StackTrace,
+    ClientCache, CompilationUnit) {
 
 "use strict";
 
