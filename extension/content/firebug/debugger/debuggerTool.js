@@ -22,7 +22,7 @@ function (Firebug, FBTrace, Obj, Arr, Options, Tool, StackFrame, StackTrace,
 // ********************************************************************************************* //
 // Constants
 
-var TraceError = FBTrace.to("DBG_ERRORS");
+var TraceError = FBTrace.toError();
 var Trace = FBTrace.to("DBG_DEBUGGERTOOL");
 
 // ********************************************************************************************* //
