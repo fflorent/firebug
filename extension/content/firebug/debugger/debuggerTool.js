@@ -7,22 +7,22 @@ define([
     "firebug/lib/array",
     "firebug/lib/options",
     "firebug/chrome/tool",
+    "firebug/debugger/debuggerLib",
+    "firebug/debugger/debugger",
     "firebug/debugger/stack/stackFrame",
     "firebug/debugger/stack/stackTrace",
     "firebug/debugger/clients/clientCache",
     "arch/compilationunit",
-    "firebug/debugger/debuggerLib",
-    "firebug/debugger/debugger",
 ],
-function (Firebug, FBTrace, Obj, Arr, Options, Tool, StackFrame, StackTrace,
-    ClientCache, CompilationUnit, DebuggerLib, Debugger) {
+function (Firebug, FBTrace, Obj, Arr, Options, Tool, DebuggerLib, Debugger, StackFrame, StackTrace,
+    ClientCache, CompilationUnit) {
 
 "use strict";
 
 // ********************************************************************************************* //
 // Constants
 
-var TraceError = FBTrace.to("DBG_ERRORS");
+var TraceError = FBTrace.toError();
 var Trace = FBTrace.to("DBG_DEBUGGERTOOL");
 
 // ********************************************************************************************* //
@@ -101,20 +101,8 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             }
         }
 
-        if (this.dbg)
-            delete this.dbg;
         // Detach client-thread listeners.
         this.detachListeners();
-    },
-
-    /**
-     * Singleton to get the Debugger Object.
-     */
-    getDebugger: function()
-    {
-        if (!this.dbg)
-            this.dbg = DebuggerLib.makeDebuggerForContext(this.context);
-        return this.dbg;
     },
 
     /**
@@ -125,7 +113,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
      */
     breakOnNext: function(enabled)
     {
-        var dbg = this.getDebugger();
+        var dbg = this._getDebugger();
         if (enabled)
             dbg.onEnterFrame = this.onEnterFrame.bind(this);
         else
@@ -612,6 +600,22 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             Trace.sysout("debuggerTool.updateBreakOnErrors; response received:", response);
         });
     },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    // Local Helpers
+    /**
+     * Singleton to get the Debugger Object.
+     */
+    _getDebugger: function()
+    {
+        if (!this._dbg)
+        {
+            Trace.sysout("DebuggerTool._getDebugger; create new Debugger instance");
+            this._dbg = DebuggerLib.makeDebuggerForContext(this.context);
+        }
+        return this._dbg;
+    },
+
 });
 
 // ********************************************************************************************* //

@@ -48,7 +48,7 @@ function (Firebug, FBTrace, Obj, Locale, Events, Dom, Arr, Css, Url, Domplate, P
 
 var {domplate, DIV} = Domplate;
 
-var TraceError = FBTrace.to("DBG_ERRORS");
+var TraceError = FBTrace.toError();
 var Trace = FBTrace.to("DBG_SCRIPTPANEL");
 
 // ********************************************************************************************* //
@@ -1334,15 +1334,6 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
         {
             TraceError.sysout("scriptPanel.onStopDebugging; EXCEPTION " + exc, exc);
         }
-    },
-
-    onDebuggerPaused: function()
-    {
-        // Reset the break-on-next flag.
-        // Note: this instruction is always executed after DebuggerKeyword.onDebuggerPaused
-        // (in which we prevent the notification to appear for BreakOnNext)
-        // since ScriptPanel is a class and DebuggerKeyword is a unique object.
-        this.breakOnNext(false);
     },
 
     newSource: function(sourceFile)
