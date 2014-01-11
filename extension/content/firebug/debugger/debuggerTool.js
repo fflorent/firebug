@@ -122,7 +122,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 
     setUserReturnValue: function(userReturnValue)
     {
-        var frame = this.getDebugger().getNewestFrame();
+        var frame = this._getDebugger().getNewestFrame();
         if (!frame)
         {
             TraceError.sysout("debuggerTool.setReturnValue; newest frame not found");
@@ -153,7 +153,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
      */
     getUserReturnValue: function()
     {
-        var frame = this.getDebugger().getNewestFrame();
+        var frame = this._getDebugger().getNewestFrame();
         if (!frame || !wmUserReturnValues.has(frame))
             return {"found": false};
 
@@ -335,7 +335,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
         // fetches only the instances that have been created to call the "onPop" handlers. So when
         // calling setReturnValue, it is too late to create that Frame object.
         // Also see: http://ur1.ca/gc9dy
-        this.getDebugger().getNewestFrame();
+        this._getDebugger().getNewestFrame();
     },
 
     resumed: function()
