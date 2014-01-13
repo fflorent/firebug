@@ -111,9 +111,14 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
     {
         var dbg = this._getDebugger();
         if (enabled)
+        {
             dbg.onEnterFrame = this.onEnterFrame.bind(this);
+        }
         else
+        {
             dbg.onEnterFrame = undefined;
+            this._destroyDebugger();
+        }
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -533,6 +538,13 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             this._dbg = DebuggerLib.makeDebuggerForContext(this.context);
         }
         return this._dbg;
+    },
+
+    _destroyDebugger: function()
+    {
+        DebuggerLib.destroyDebuggerForContext(this.context, this._dbg);
+        if (this._dbg)
+            delete this._dbg;
     },
 
 });
