@@ -109,7 +109,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
      */
     breakOnNext: function(enabled)
     {
-        var dbg = this._getDebugger();
+        var dbg = getDebugger(this);
         if (enabled)
         {
             dbg.onEnterFrame = this.onEnterFrame.bind(this);
@@ -117,7 +117,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
         else
         {
             dbg.onEnterFrame = undefined;
-            this._destroyDebugger();
+            DebuggerLib.destroyDebuggerForContext(this.context, dbg)
         }
     },
 
@@ -524,30 +524,22 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             Trace.sysout("debuggerTool.updateBreakOnErrors; response received:", response);
         });
     },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-    // Local Helpers
-    /**
-     * Singleton to get the Debugger Object.
-     */
-    _getDebugger: function()
-    {
-        if (!this._dbg)
-        {
-            Trace.sysout("DebuggerTool._getDebugger; create new Debugger instance");
-            this._dbg = DebuggerLib.makeDebuggerForContext(this.context);
-        }
-        return this._dbg;
-    },
-
-    _destroyDebugger: function()
-    {
-        DebuggerLib.destroyDebuggerForContext(this.context, this._dbg);
-        if (this._dbg)
-            delete this._dbg;
-    },
-
 });
+
+// ********************************************************************************************* //
+// Helpers
+
+var debuggerMap = new WeakMap();
+
+var getDebugger = function(tool)
+{
+    var dbg = debuggerMap.get(tool);
+    if (dbg)
+        return dbg;
+    dbg = DebuggerLib.makeDebuggerForContext(tool.context);
+    debuggerMap.set(tool, dbg);
+    return dbg;
+};
 
 // ********************************************************************************************* //
 // Registration
