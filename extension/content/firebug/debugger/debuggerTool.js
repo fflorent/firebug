@@ -117,7 +117,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
         else
         {
             dbg.onEnterFrame = undefined;
-            DebuggerLib.destroyDebuggerForContext(this.context, dbg)
+            destroyDebugger(this, dbg);
         }
     },
 
@@ -539,6 +539,12 @@ var getDebugger = function(tool)
     dbg = DebuggerLib.makeDebuggerForContext(tool.context);
     debuggerMap.set(tool, dbg);
     return dbg;
+};
+
+var destroyDebugger = function(tool, dbg)
+{
+    DebuggerLib.destroyDebuggerForContext(tool.context, dbg)
+    debuggerMap.delete(tool);
 };
 
 // ********************************************************************************************* //
