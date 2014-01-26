@@ -21,7 +21,7 @@
 }
 
 /* Text indent from the breakpoint column */
-.cm-s-firebug .firebug-line {
+.cm-s-firebug .firebug-line, .cm-s-firebug .CodeMirror-cursor {
     margin-left: 10px;
 }
 
