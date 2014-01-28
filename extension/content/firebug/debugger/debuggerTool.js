@@ -316,7 +316,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             Trace.sysout("debuggerTool.onEnterFrame; triggering BreakOnNext");
             // Note: Break On Next (and the onEnterFrame callback) will be disabled in
             // ScriptPanel.prototype.onStartDebugging, called when the debugger is paused.
-            Debugger.breakNow(this.context, frame);
+            Debugger.breakNow(this.context);
         }
     },
 
