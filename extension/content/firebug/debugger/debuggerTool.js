@@ -113,13 +113,11 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
      */
     breakOnNext: function(enabled)
     {
-        if (!this.breakOnNextDebugger)
-        {
-            this.breakOnNextDebugger = DebuggerLib.makeDebuggerForContext(this.context);
-        }
-
         if (enabled)
         {
+            if (!this.breakOnNextDebugger)
+                this.breakOnNextDebugger = DebuggerLib.makeDebuggerForContext(this.context);
+
             this.breakOnNextDebugger.onEnterFrame = this.onEnterFrame.bind(this);
         }
         else
