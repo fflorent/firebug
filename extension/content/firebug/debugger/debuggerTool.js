@@ -120,7 +120,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 
             this.breakOnNextDebugger.onEnterFrame = this.onEnterFrame.bind(this);
         }
-        else
+        else if (this.breakOnNextDebugger)
         {
             this.breakOnNextDebugger.onEnterFrame = undefined;
             DebuggerLib.destroyDebuggerForContext(this.context, this.breakOnNextDebugger);
