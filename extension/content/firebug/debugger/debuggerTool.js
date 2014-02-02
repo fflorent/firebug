@@ -1,4 +1,6 @@
 /* See license.txt for terms of usage */
+/*jshint noempty:false, esnext:true, curly:false, unused:false, moz:true*/
+/*global define:1*/
 
 define([
     "firebug/firebug",
@@ -42,6 +44,8 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 /** @lends DebuggerTool */
 {
     dispatchName: "DebuggerTool",
+
+    breakOnNextDebugger: null,
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     // Initialization
@@ -109,15 +113,20 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
      */
     breakOnNext: function(enabled)
     {
-        var dbg = getDebugger(this);
+        if (!this.breakOnNextDebugger)
+        {
+            this.breakOnNextDebugger = DebuggerLib.makeDebuggerForContext(this.context);
+        }
+
         if (enabled)
         {
-            dbg.onEnterFrame = this.onEnterFrame.bind(this);
+            this.breakOnNextDebugger.onEnterFrame = this.onEnterFrame.bind(this);
         }
         else
         {
-            dbg.onEnterFrame = undefined;
-            destroyDebugger(this, dbg);
+            this.breakOnNextDebugger.onEnterFrame = undefined;
+            DebuggerLib.destroyDebuggerForContext(this.context, this.breakOnNextDebugger);
+            this.breakOnNextDebugger = null;
         }
     },
 
@@ -229,7 +238,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
         this.context.currentPauseActor = packet.actor;
 
         // Notify listeners, about debugger pause event.
-        this.dispatch("onDebuggerPaused", [this.context, event, packet])
+        this.dispatch("onDebuggerPaused", [this.context, event, packet]);
 
         // Send event allowing immediate resume. If at least one listener returns
         // true, the debugger will resume.
@@ -481,7 +490,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             {
                 TraceError.sysout("debuggerTool.evalCallback; EXCEPTION " + e, e);
             }
-        }
+        };
     },
 
     // xxxHonza: used to get boolean result of evaluated breakpoint condition
@@ -529,23 +538,6 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 // ********************************************************************************************* //
 // Helpers
 
-var debuggerMap = new WeakMap();
-
-var getDebugger = function(tool)
-{
-    var dbg = debuggerMap.get(tool);
-    if (dbg)
-        return dbg;
-    dbg = DebuggerLib.makeDebuggerForContext(tool.context);
-    debuggerMap.set(tool, dbg);
-    return dbg;
-};
-
-var destroyDebugger = function(tool, dbg)
-{
-    DebuggerLib.destroyDebuggerForContext(tool.context, dbg)
-    debuggerMap.delete(tool);
-};
 
 // ********************************************************************************************* //
 // Registration
