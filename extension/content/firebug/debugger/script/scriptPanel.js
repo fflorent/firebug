@@ -387,12 +387,12 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
 
     removeDebugLocation: function()
     {
-        this.scriptView.setDebugLocation(-1);
+        this.scriptView.setDebugLocation(-1, true);
     },
 
-    setDebugLocation: function(lineNo)
+    setDebugLocation: function(lineNo, noScroll)
     {
-        this.scriptView.setDebugLocation(lineNo);
+        this.scriptView.setDebugLocation(lineNo, noScroll);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -436,7 +436,7 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
     {
         Trace.sysout("scriptPanel.updateLocation; " + object, object);
 
-        // Make sure the update panel's content. If there is currently a warning displayed
+        // Make sure to update panel's content. If there is currently a warning displayed
         // it might disappears since no longer valid (e.g. "Debugger is already active").
         if (ScriptPanelWarning.updateLocation(this))
             return;
@@ -495,7 +495,7 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-    // Breadcrumbs (object path)
+    // Status Path (callstack)
 
     framesadded: function(stackTrace)
     {
@@ -527,6 +527,18 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
             return this.context.currentTrace.frames;
     },
 
+    getCurrentObject: function()
+    {
+        // If the debugger is halted the emphasized object in the status path (i.e. callstack)
+        // is always the current frame (can be changed through the Callstack panel).
+        if (this.context.currentFrame)
+            return this.context.currentFrame;
+
+        // If the debugger isn't halted the status path is hidden, but still, let's return
+        // the default value (the current panel selection).
+        return BasePanel.getCurrentObject.apply(this, arguments);
+    },
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     // Source
 
@@ -545,13 +557,12 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
         if (!compilationUnit)
             return;
 
-        var self = this;
         function callback(unit, firstLineNumber, lastLineNumber, lines)
         {
             // There could have been more asynchronous requests done at the same time
             // (e.g. show default script and restore the last visible script).
             // Use only the callback that corresponds to the current location URL.
-            if (!self.location || self.location.getURL() != unit.getURL())
+            if (!this.location || this.location.getURL() != unit.getURL())
             {
                 Trace.sysout("scriptPanel.showSource; Bail out, different location now");
                 return;
@@ -566,31 +577,31 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
             // 2) Get its content type that should be set at this moment. If not set
             //     it's guessed according to the file extension.
             // 3) Get the type/category from the content type.
-            var sourceFile = SourceFile.getSourceFileByUrl(self.context, sourceLink.href);
+            var sourceFile = SourceFile.getSourceFileByUrl(this.context, sourceLink.href);
             var mimeType = NetUtils.getMimeType(sourceFile.contentType, sourceFile.href);
             var category = NetUtils.getCategory(mimeType);
 
             // Display the source.
-            self.scriptView.showSource(lines.join(""), category);
+            this.scriptView.showSource(lines.join(""), category);
 
             var options = sourceLink.getOptions();
 
             // Make sure the current execution line is marked if the current frame
-            // is coming from the current location.
-            var frame = self.context.currentFrame;
-            if (frame && frame.href == self.location.href && frame.line == self.location.line)
-                options.debugLocation = true;
+            // is coming from the same location.
+            var frame = this.context.currentFrame;
+            if (frame && frame.href == this.location.href)
+                this.setDebugLocation(frame.line - 1, true);
 
             // If the location object is SourceLink automatically scroll to the
             // specified line. Otherwise make sure to reset the scroll position
             // to the top since new script is probably just being displayed.
-            if (self.location instanceof SourceLink)
-                self.scrollToLine(self.location.line, options);
+            if (this.location instanceof SourceLink)
+                this.scrollToLine(this.location.line, options);
             else
-                self.scrollToLine(0);
+                this.scrollToLine(1);
         }
 
-        compilationUnit.getSourceLines(-1, -1, callback);
+        compilationUnit.getSourceLines(-1, -1, callback.bind(this));
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -783,6 +794,14 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
         }
 
         var conditionEditor = this.getEditor();
+        if (!conditionEditor.breakpoint)
+        {
+            // xxxHonza: Another reason why Conditional Editor feature needs refactoring.
+            TraceError.sysout("ScriptPanel.openBreakpointConditionEditor; ERROR " +
+                "conditionEditor.breakpoint == null?");
+            return;
+        }
+
         conditionEditor.breakpoint.lineNo = lineNo;
 
         // As Editor scrolls(not panel itself) with long scripts, we need to set
@@ -877,7 +896,7 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
         // Remove breakpoint from the UI.
         this.scriptView.removeBreakpoint(bp);
         if (this.scriptView.editor && this.scriptView.editor.debugLocation == bp.lineNo)
-            this.scriptView.setDebugLocation(bp.lineNo);
+            this.scriptView.setDebugLocation(bp.lineNo, true);
     },
 
     onBreakpointEnabled: function(context, bp, bpClient)
@@ -1345,8 +1364,16 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
         Trace.sysout("scriptPanel.newSource; " + sourceFile.href, sourceFile);
 
         // New script has been appended, update the default location if necessary.
+        // xxxHonza: Do not use this.navigate() method since it would fire "onPanelNavigate"
+        // event and cause {@linke NavigationHistory} to be updated (issue 6950).
+        // Also, explicit executing of syncLocationList here is not ideal (are there any
+        // other options?)
         if (!this.location)
-            this.navigate(null);
+        {
+            this.location = this.getDefaultLocation();
+            this.updateLocation(this.location);
+            Firebug.chrome.syncLocationList();
+        }
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
