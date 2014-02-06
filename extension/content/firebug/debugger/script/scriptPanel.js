@@ -29,6 +29,7 @@ define([
     "firebug/debugger/breakpoints/breakpoint",
     "firebug/debugger/breakpoints/breakpointStore",
     "firebug/debugger/breakpoints/breakpointConditionEditor",
+    "firebug/debugger/breakpoints/breakOnNextInstruction",
     "firebug/debugger/script/scriptPanelWarning",
     "firebug/debugger/script/breakNotification",
     "firebug/debugger/script/scriptPanelLineUpdater",
@@ -40,8 +41,8 @@ define([
 function (Firebug, FBTrace, Obj, Locale, Events, Dom, Arr, Css, Url, Domplate, Persist, Keywords,
     System, Options, Promise, ActivablePanel, Menu, Rep, StatusPath, SearchBox, Editor, ScriptView,
     StackFrame, SourceLink, SourceFile, Breakpoint, BreakpointStore, BreakpointConditionEditor,
-    ScriptPanelWarning, BreakNotification, ScriptPanelLineUpdater, DebuggerLib, CommandLine,
-    NetUtils, CompilationUnit) {
+    BreakOnNextInstruction, ScriptPanelWarning, BreakNotification, ScriptPanelLineUpdater,
+    DebuggerLib, CommandLine, NetUtils, CompilationUnit) {
 
 "use strict";
 
@@ -76,7 +77,6 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
     breakable: true,
     enableA11y: true,
     order: 40,
-    breakOnNextActivated: false,
 
     // {@link StatusPath} UI component that displays call-stack in the toolbar will be
     // updated asynchronously.
@@ -1314,11 +1314,7 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
 
     breakOnNext: function(enabled)
     {
-        if (this.breakOnNextActivated !== enabled)
-        {
-            this.breakOnNextActivated = enabled;
-            this.tool.breakOnNext(enabled);
-        }
+        BreakOnNextInstruction.breakOnNext(this.context, enabled);
     },
 
     getBreakOnNextTooltip: function(armed)
@@ -1329,7 +1325,7 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
 
     shouldBreakOnNext: function()
     {
-        return !!this.breakOnNextActivated ;  // TODO BTI
+        return !!this.context.breakOnNextActivated ;  // TODO BTI
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -1476,9 +1472,6 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
 
             this.syncCommands(this.context);
             this.syncListeners(this.context);
-
-            // Disable Break On Next if it was activated.
-            this.breakOnNext(false);
 
             // Update Break on Next lightning
             //Firebug.Breakpoint.updatePanelTab(this, false);

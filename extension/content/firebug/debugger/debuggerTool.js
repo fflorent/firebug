@@ -45,8 +45,6 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 {
     dispatchName: "DebuggerTool",
 
-    breakOnNextDebugger: null,
-
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     // Initialization
 
@@ -103,29 +101,6 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 
         // Detach client-thread listeners.
         this.detachListeners();
-    },
-
-    /**
-     * If enabled = true, enable the onEnterFrame callback for BreakOnNext.
-     * Otherwise, disable it to avoid performance penalty.
-     *
-     * @param enabled
-     */
-    breakOnNext: function(enabled)
-    {
-        if (enabled)
-        {
-            if (!this.breakOnNextDebugger)
-                this.breakOnNextDebugger = DebuggerLib.makeDebuggerForContext(this.context);
-
-            this.breakOnNextDebugger.onEnterFrame = this.onEnterFrame.bind(this);
-        }
-        else if (this.breakOnNextDebugger)
-        {
-            this.breakOnNextDebugger.onEnterFrame = undefined;
-            DebuggerLib.destroyDebuggerForContext(this.context, this.breakOnNextDebugger);
-            this.breakOnNextDebugger = null;
-        }
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -310,21 +285,6 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 
         if (this.context.clientCache)
             this.context.clientCache.clear();
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-    // Debugger Listeners
-
-    onEnterFrame: function(frame)
-    {
-        // Note: for inline event handler, frame.type also equals to "call".
-        if (frame.type === "call")
-        {
-            Trace.sysout("debuggerTool.onEnterFrame; triggering BreakOnNext");
-            // Note: Break On Next (and the onEnterFrame callback) will be disabled in
-            // ScriptPanel.prototype.onStartDebugging, called when the debugger is paused.
-            Debugger.breakNow(this.context);
-        }
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
