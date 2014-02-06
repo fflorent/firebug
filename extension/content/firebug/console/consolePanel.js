@@ -147,6 +147,9 @@ ConsolePanel.prototype = Obj.extend(ActivablePanel,
         Firebug.Console.addListener(this);
 
         Firebug.registerUIListener(this);
+
+        if (Firebug.Console.isEnabled())
+            Firebug.Console.attachConsoleToWindows(this.context);
     },
 
     destroy: function(state)
@@ -464,7 +467,7 @@ ConsolePanel.prototype = Obj.extend(ActivablePanel,
 
         var search = new Search.TextSearch(this.panelNode, findRow);
 
-        var logRow = search.find(text, false, Firebug.Search.isCaseSensitive(text));
+        var logRow = search.find(text, false, SearchBox.isCaseSensitive(text));
         if (!logRow)
         {
             Events.dispatch(this.fbListeners, "onConsoleSearchMatchFound", [this, text, []]);
@@ -472,7 +475,7 @@ ConsolePanel.prototype = Obj.extend(ActivablePanel,
         }
 
         for (; logRow; logRow = search.findNext(undefined, undefined, undefined,
-            Firebug.Search.isCaseSensitive(text)))
+            SearchBox.isCaseSensitive(text)))
         {
             if (this.matchesFilter(logRow))
             {
@@ -501,7 +504,7 @@ ConsolePanel.prototype = Obj.extend(ActivablePanel,
     onFiltersSet: function(filterTypes)
     {
         this.setFilter(filterTypes);
-        Firebug.Search.update(this.context);
+        SearchBox.update(this.context);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
