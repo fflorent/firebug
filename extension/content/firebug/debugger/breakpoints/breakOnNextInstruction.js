@@ -69,6 +69,10 @@ function onEnterFrame(context, frame)
     if (frame.type === "call")
     {
         Trace.sysout("debuggerTool.onEnterFrame; triggering BreakOnNext");
+
+        if (isFrameInlineEvent(frame))
+            return;
+
         try
         {
             Debugger.breakNow(context);
@@ -79,6 +83,21 @@ function onEnterFrame(context, frame)
             BreakOnNextInstruction.breakOnNext(context, false);
         }
     }
+}
+
+/**
+ * Checks whether a frame is created from an inline event attribute.
+ */
+function isFrameInlineEvent(frame)
+{
+    // Hack: we don't know whether the frame is created from an inline event attribute using the
+    // frame properties. As a workarounf, check if the name of the callee begins with "on", that
+    // an attribute of the name of the callee exists and compare if |this[callee.name] === callee|.
+    var calleeName = frame.callee && frame.callee.name;
+    var unsafeThis = frame.this && frame.this.unsafeDereference();
+    var unsafeCallee = frame.callee.unsafeDereference();
+    return calleeName && calleeName.startsWith("on") && unsafeThis &&
+        unsafeThis.getAttribute(calleeName) && unsafeThis[calleeName] === unsafeCallee;
 }
 
 return BreakOnNextInstruction;
