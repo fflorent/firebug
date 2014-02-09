@@ -1,23 +1,17 @@
 /* See license.txt for terms of usage */
-/*jshint noempty:false, esnext:true, curly:false, unused:false, moz:true*/
+/*jshint noempty:false, esnext:true, curly:false, moz:true*/
 /*global define:1*/
 
 define([
     "firebug/firebug",
     "firebug/lib/trace",
     "firebug/lib/object",
-    "firebug/lib/array",
     "firebug/lib/options",
     "firebug/chrome/tool",
-    "firebug/debugger/debuggerLib",
-    "firebug/debugger/debugger",
     "firebug/debugger/stack/stackFrame",
     "firebug/debugger/stack/stackTrace",
-    "firebug/debugger/clients/clientCache",
-    "arch/compilationunit",
 ],
-function (Firebug, FBTrace, Obj, Arr, Options, Tool, DebuggerLib, Debugger, StackFrame, StackTrace,
-    ClientCache, CompilationUnit) {
+function (Firebug, FBTrace, Obj, Options, Tool, StackFrame, StackTrace) {
 
 "use strict";
 
