@@ -29,7 +29,7 @@ define([
     "firebug/debugger/breakpoints/breakpoint",
     "firebug/debugger/breakpoints/breakpointStore",
     "firebug/debugger/breakpoints/breakpointConditionEditor",
-    "firebug/debugger/breakpoints/breakOnNextInstruction",
+    "firebug/debugger/breakpoints/breakOnNext",
     "firebug/debugger/script/scriptPanelWarning",
     "firebug/debugger/script/breakNotification",
     "firebug/debugger/script/scriptPanelLineUpdater",
@@ -41,7 +41,7 @@ define([
 function (Firebug, FBTrace, Obj, Locale, Events, Dom, Arr, Css, Url, Domplate, Persist, Keywords,
     System, Options, Promise, ActivablePanel, Menu, Rep, StatusPath, SearchBox, Editor, ScriptView,
     StackFrame, SourceLink, SourceFile, Breakpoint, BreakpointStore, BreakpointConditionEditor,
-    BreakOnNextInstruction, ScriptPanelWarning, BreakNotification, ScriptPanelLineUpdater,
+    BreakOnNext, ScriptPanelWarning, BreakNotification, ScriptPanelLineUpdater,
     DebuggerLib, CommandLine, NetUtils, CompilationUnit) {
 
 "use strict";
@@ -1314,7 +1314,7 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
 
     breakOnNext: function(enabled)
     {
-        BreakOnNextInstruction.breakOnNext(this.context, enabled);
+        BreakOnNext.breakOnNext(this.context, enabled);
     },
 
     getBreakOnNextTooltip: function(armed)
