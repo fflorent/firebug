@@ -142,11 +142,20 @@ function isFrameInlineEvent(frame)
     var calleeName = frame.callee && frame.callee.name;
     var unsafeThis = frame.this && frame.this.unsafeDereference();
     var unsafeCallee = frame.callee.unsafeDereference();
+    var parentEnv = frame.environment && frame.environment.parent;
 
-    return calleeName && calleeName.startsWith("on") && unsafeThis &&
-        unsafeThis.getAttribute(calleeName) && unsafeThis[calleeName] === unsafeCallee;
+    try
+    {
+        return calleeName && calleeName.startsWith("on") && unsafeThis &&
+            parentEnv && parentEnv.type === "object" &&
+            unsafeThis.nodeType === document.ELEMENT_NODE &&
+            unsafeThis.getAttribute(calleeName) && unsafeThis[calleeName] === unsafeCallee;
+    }
+    catch (ex)
+    {
+        return false;
+    }
 }
-
 
 // ********************************************************************************************* //
 // Registration
