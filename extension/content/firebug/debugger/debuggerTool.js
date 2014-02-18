@@ -8,10 +8,11 @@ define([
     "firebug/lib/object",
     "firebug/lib/options",
     "firebug/chrome/tool",
+    "firebug/debugger/debuggerLib",
     "firebug/debugger/stack/stackFrame",
     "firebug/debugger/stack/stackTrace",
 ],
-function (Firebug, FBTrace, Obj, Options, Tool, StackFrame, StackTrace) {
+function (Firebug, FBTrace, Obj, Options, Tool, DebuggerLib, StackFrame, StackTrace) {
 
 "use strict";
 
@@ -337,6 +338,54 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 
     rerun: function()
     {
+        var frame = DebuggerLib.getCurrentFrame(this.context);
+        // Get the oldest eval or function frame.
+        var oldestFrame = getOldestFunctionOrEvalFrame(frame);
+
+        if (!oldestFrame)
+        {
+            Trace.sysout("DebuggerTool.rerun; oldestFrame is null. Abort");
+            return;
+        }
+
+        var onResume = null;
+        if (oldestFrame.type === "call")
+        {
+            var callee = oldestFrame.callee.unsafeDereference();
+            var args = oldestFrame.arguments || [];
+            var thisValue = oldestFrame.this.unsafeDereference();
+            onResume = function(answer)
+            {
+                // TODO Control answer
+                callee.apply(thisValue, args);
+            };
+        }
+        else if (oldestFrame.type === "eval")
+        {
+            var text = oldestFrame.script.source.text;
+            var global = DebuggerLib.getThreadDebuggeeGlobalForFrame(frame).unsafeDereference();
+            onResume = function(answer)
+            {
+                // TODO Control answer
+                global.eval(text);
+            };
+        }
+        else
+        {
+            // I don't expect this to happen. Still, let's trace it.
+            TraceError.sysout("DebuggerTool.rerun; unsupported type, can't create onResume. Abort");
+            return;
+        }
+
+        // Interrupt the current stack frame.
+        // xxxFlorent: needs pop() to be implemented and used server-side for this type of packet. 
+        // We need to find a hack.
+        var limit = {
+            type: "resume",
+            forceCompletion: null
+        };
+
+        this.resume(onResume, limit);
     },
 
     resume: function(callback, limit)
@@ -492,6 +541,20 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 // ********************************************************************************************* //
 // Helpers
 
+function getOldestFunctionOrEvalFrame(frame)
+{
+    var curFrame = frame;
+    var acceptableTypes = ["call", "eval"];
+    var oldestFrame = (acceptableTypes.indexOf(curFrame.type) !== -1) ? curFrame : null;
+
+    while (curFrame = curFrame.older)
+    {
+        if (acceptableTypes.indexOf(curFrame.type) !== -1)
+            oldestFrame = curFrame;
+    }
+
+    return oldestFrame;
+}
 
 // ********************************************************************************************* //
 // Registration
