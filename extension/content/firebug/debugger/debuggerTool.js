@@ -349,6 +349,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
         }
 
         var onResume = null;
+        var context = this.context;
         if (oldestFrame.type === "call")
         {
             var callee = oldestFrame.callee.unsafeDereference();
@@ -356,6 +357,8 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             var thisValue = oldestFrame.this.unsafeDereference();
             onResume = function(answer)
             {
+                // Destroy the debugger.
+                DebuggerLib.destroyDebuggerForContext(context, dbg);
                 // TODO Control answer
                 callee.apply(thisValue, args);
             };
@@ -366,6 +369,8 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             var global = DebuggerLib.getThreadDebuggeeGlobalForFrame(frame).unsafeDereference();
             onResume = function(answer)
             {
+                // Destroy the debugger.
+                DebuggerLib.destroyDebuggerForContext(context, dbg);
                 // TODO Control answer
                 global.eval(text);
             };
@@ -378,13 +383,30 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
         }
 
         // Interrupt the current stack frame.
-        // xxxFlorent: needs pop() to be implemented and used server-side for this type of packet. 
-        // We need to find a hack.
-        var limit = {
+        // xxxFlorent: needs pop() to be implemented and used server-side for this type of packet.
+        // Rather use a hack with onStep and return null when the latter is triggered.
+        /*var limit = {
             type: "resume",
             forceCompletion: null
-        };
+        };*/
+        var limit = null;
 
+        // xxxFlorent: For some reason, DebuggerLib.getNewestFrame().onStep = () => null 
+        // doesn't work, but works if we get the newest frame using dbg.getNewestFrame().
+        var dbg = DebuggerLib.makeDebuggerForContext(this.context);
+        var frame = dbg.getNewestFrame();
+
+        // Terminate the execution of the current frame by returning null when resuming the thread
+        function haltExecution()
+        {
+            Trace.sysout("debuggerTool.rerun; haltExecution");
+            return null;
+        }
+
+        // Currently, onStep is triggered when the debugger is resumed and onResume isn't.
+        // That's odd, but in case this will change, return null for both.
+        // xxxFlorent: doesn't work when the return value is displayed. Use issue 6857 to do so.
+        frame.onStep = frame.onResume = haltExecution;
         this.resume(onResume, limit);
     },
 
