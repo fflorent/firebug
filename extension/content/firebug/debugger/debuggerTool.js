@@ -363,16 +363,30 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
                 callee.apply(thisValue, args);
             };
         }
-        else if (oldestFrame.type === "eval")
+        else if (oldestFrame.type === "eval" || oldestFrame.type === "global")
         {
-            var text = oldestFrame.script.source.text;
+            var script = oldestFrame.script;
+            if (!script)
+            {
+                TraceError("debuggerTool.rerun; script undefined, abort");
+                return;
+            }
+            var source = script.source;
+            if (!source)
+            {
+                TraceError("debuggerTool.rerun; source undefined, abort");
+                return;
+            }
             var global = DebuggerLib.getThreadDebuggeeGlobalForFrame(frame).unsafeDereference();
             onResume = function(answer)
             {
                 // Destroy the debugger.
                 DebuggerLib.destroyDebuggerForContext(context, dbg);
                 // TODO Control answer
-                global.eval(text);
+                global.eval(source.text, {
+                    url: script.url,
+                    lineNumber: source.startLine
+                });
             };
         }
         else
@@ -403,10 +417,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             return null;
         }
 
-        // Currently, onStep is triggered when the debugger is resumed and onResume isn't.
-        // That's odd, but in case this will change, return null for both.
-        // xxxFlorent: doesn't work when the return value is displayed. Use issue 6857 to do so.
-        frame.onStep = frame.onResume = haltExecution;
+        frame.onStep = haltExecution;
         this.resume(onResume, limit);
     },
 
@@ -566,14 +577,14 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 function getOldestFunctionOrEvalFrame(frame)
 {
     var curFrame = frame;
-    var acceptableTypes = ["call", "eval"];
+    var acceptableTypes = ["call", "eval", "global"];
     var oldestFrame = (acceptableTypes.indexOf(curFrame.type) !== -1) ? curFrame : null;
 
-    while (curFrame = curFrame.older)
+    do
     {
         if (acceptableTypes.indexOf(curFrame.type) !== -1)
             oldestFrame = curFrame;
-    }
+    } while (curFrame = curFrame.older)
 
     return oldestFrame;
 }
