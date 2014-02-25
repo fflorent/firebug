@@ -11,8 +11,12 @@
        var iter = 0;
 
        function clicker() {
+         var o = {
+            get a() console.log("groing a")
+         };
          dataDiv = document.getElementById("data");
-         dataDiv.innerHTML += fibonacci(iter++) + "<br/>";
+         o.a; // Rerun here. Once under two, the debugger will resume...
+         dataDiv.innerHTML += fibonacci(++iter) + "<br/>";
      }
     </script>
 </head>
@@ -33,5 +37,8 @@
   <p>
   Single Step Tests for Firebug.
   </p>
+  <script>
+    window.eval("clicker()");
+  </script>
 </body>
 </html>
