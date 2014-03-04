@@ -111,6 +111,8 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
         this.context.getTool("breakpoint").addListener(this);
         this.context.getTool("source").addListener(this);
 
+        BreakOnNext.addListener(this);
+
         // Register as a listener for 'updateSidePanels' event.
         Firebug.registerUIListener(this);
     },
@@ -1544,6 +1546,15 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
             this.updateLocation(this.location);
             Firebug.chrome.syncLocationList();
         }
+    },
+
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+    // BreakOnNext Listeners
+
+    breakOnNextUpdated: function(context)
+    {
+        this.dispatch("breakOnNextUpdated", arguments);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

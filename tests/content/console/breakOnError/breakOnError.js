@@ -13,7 +13,7 @@ function runTest()
                     FBTest.testDone("breakOnNext.DONE");
                 });
 
-                win.setTimeout(function()
+                FBTest.clickBreakOnNextButton(null, function()
                 {
                     FBTest.progress("activated break on next");
                     var testButton = win.document.getElementById("testButton");
@@ -25,8 +25,7 @@ function runTest()
 
                     FBTest.progress("now click the testButton");
                     FBTest.click(testButton);
-                }, 200);
-                FBTest.clickBreakOnNextButton();
+                });
             });
         });
     });

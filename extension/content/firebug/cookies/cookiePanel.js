@@ -427,6 +427,8 @@ CookiePanel.prototype = Obj.extend(ActivablePanel,
 
         Trace.sysout("cookies.breakOnNext; " + this.context.breakOnCookie + ", " +
             this.context.getName());
+
+        this.dispatch("breakOnNextUpdated", [this.context, breaking]);
     },
 
     shouldBreakOnNext: function()

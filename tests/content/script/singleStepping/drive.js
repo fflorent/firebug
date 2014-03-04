@@ -34,19 +34,21 @@ function selectFile()
 
 function breakOnNext(panel)
 {
-    FBTest.clickBreakOnNextButton(FW.Firebug.chrome);
-    FBTest.progress("The breakOnNext button was pushed");
+    FBTest.clickBreakOnNextButton(FW.Firebug.chrome, function()
+    {
+        FBTest.progress("The breakOnNext button was pushed");
 
-    var button = FW.Firebug.chrome.$("fbBreakOnNextButton");
-    FBTest.compare("false", button.getAttribute("breakable"), "The button is armed for break")
+        var button = FW.Firebug.chrome.$("fbBreakOnNextButton");
+        FBTest.compare("false", button.getAttribute("breakable"), "The button is armed for break")
 
-    FBTest.progress("Listen for exeline true, meaning the breakOnNext hit");
+        FBTest.progress("Listen for exeline true, meaning the breakOnNext hit");
 
-    FBTest.waitForBreakInDebugger(FW.Firebug.chrome,
-        breakOnNextLineNo, false, checkBreakOnNext);
+        FBTest.waitForBreakInDebugger(FW.Firebug.chrome,
+            breakOnNextLineNo, false, checkBreakOnNext);
 
-    var testPageButton = win.document.getElementById("clicker");
-    FBTest.click(testPageButton);
+        var testPageButton = win.document.getElementById("clicker");
+        FBTest.click(testPageButton);
+    });
 }
 
 function checkBreakOnNext()

@@ -1202,6 +1202,12 @@ ConsolePanel.prototype = Obj.extend(ActivablePanel,
         // So, make sure to display it now.
         this.showCommandLine(true);
     },
+
+    breakOnErrorsUpdated: function(context)
+    {
+        // Fire an event as "breakOnNextUpdated", that every panel having BON fires.
+        this.dispatch("breakOnNextUpdated", arguments);
+    },
 });
 
 // ********************************************************************************************* //

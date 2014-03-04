@@ -664,6 +664,7 @@ NetPanel.prototype = Obj.extend(ActivablePanel,
     breakOnNext: function(breaking)
     {
         this.context.breakOnXHR = breaking;
+        this.dispatch("breakOnNextUpdated", [this.context, breaking]);
     },
 
     shouldBreakOnNext: function()

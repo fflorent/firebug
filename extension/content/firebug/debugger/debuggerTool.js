@@ -482,9 +482,10 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             ", ignore: " + ignore + ", thread paused: " + this.context.activeThread.paused +
             ", context stopped: " + this.context.stopped);
 
-        return this.context.activeThread.pauseOnExceptions(pause, ignore, function(response)
+        return this.context.activeThread.pauseOnExceptions(pause, ignore, (response) =>
         {
             Trace.sysout("debuggerTool.updateBreakOnErrors; response received:", response);
+            this.dispatch("breakOnErrorsUpdated", [this.context, pause, ignore]);
         });
     },
 });

@@ -75,6 +75,8 @@ var BreakOnNext = Obj.extend(Module,
         }
         // Change the "breakOnNextActivated" property, so the button of the script panel is updated.
         context.breakOnNextActivated = enabled;
+
+        this.dispatch("breakOnNextUpdated", arguments);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

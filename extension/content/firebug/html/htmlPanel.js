@@ -2004,6 +2004,7 @@ Firebug.HTMLPanel.prototype = Obj.extend(WalkingPanel,
     {
         HTMLModule.MutationBreakpoints.breakOnNext(this.context, breaking);
         this.updateMutationBreakpointListeners();
+        this.dispatch("breakOnNextUpdated", [this.context, breaking]);
     },
 
     shouldBreakOnNext: function()
