@@ -1175,7 +1175,7 @@ ConsolePanel.prototype = Obj.extend(ActivablePanel,
         return this.context.breakOnErrors;
     },
 
-    breakOnNext: function(breaking)
+    breakOnNext: function(breaking, callback)
     {
         Trace.sysout("consolePanel.breakOnNext;");
 
@@ -1183,7 +1183,7 @@ ConsolePanel.prototype = Obj.extend(ActivablePanel,
 
         // Set the flag on the server.
         var tool = this.context.getTool("debugger");
-        tool.updateBreakOnErrors();
+        tool.updateBreakOnErrors(callback);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -1201,12 +1201,6 @@ ConsolePanel.prototype = Obj.extend(ActivablePanel,
         // This is because {@CommandEditor} is not implemented as an instance of {@Firebug.Panel}
         // So, make sure to display it now.
         this.showCommandLine(true);
-    },
-
-    breakOnErrorsUpdated: function(context)
-    {
-        // Fire an event as "breakOnNextUpdated", that every panel having BON fires.
-        this.dispatch("breakOnNextUpdated", arguments);
     },
 });
 

@@ -471,7 +471,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     // Break On Exceptions
 
-    updateBreakOnErrors: function()
+    updateBreakOnErrors: function(callback)
     {
         // Either 'breakOnExceptions' option can be set (from within the Script panel options
         // menu) or 'break on next' (BON) can be activated (on the Console panel).
@@ -485,7 +485,8 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
         return this.context.activeThread.pauseOnExceptions(pause, ignore, (response) =>
         {
             Trace.sysout("debuggerTool.updateBreakOnErrors; response received:", response);
-            this.dispatch("breakOnErrorsUpdated", [this.context, pause, ignore]);
+            if (callback)
+                callback(this.context, pause, ignore);
         });
     },
 });

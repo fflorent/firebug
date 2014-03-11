@@ -421,14 +421,15 @@ CookiePanel.prototype = Obj.extend(ActivablePanel,
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
     // Support for Break On Next
 
-    breakOnNext: function(breaking)
+    breakOnNext: function(breaking, callback)
     {
         this.context.breakOnCookie = breaking;
 
         Trace.sysout("cookies.breakOnNext; " + this.context.breakOnCookie + ", " +
             this.context.getName());
 
-        this.dispatch("breakOnNextUpdated", [this.context, breaking]);
+        if (callback)
+            callback(this.context, breaking);
     },
 
     shouldBreakOnNext: function()

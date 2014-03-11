@@ -1313,9 +1313,9 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
         return this.breakable;
     },
 
-    breakOnNext: function(enabled)
+    breakOnNext: function(enabled, callback)
     {
-        BreakOnNext.breakOnNext(this.context, enabled);
+        BreakOnNext.breakOnNext(this.context, enabled, callback);
     },
 
     getBreakOnNextTooltip: function(armed)
@@ -1546,15 +1546,6 @@ ScriptPanel.prototype = Obj.extend(BasePanel,
             this.updateLocation(this.location);
             Firebug.chrome.syncLocationList();
         }
-    },
-
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-    // BreakOnNext Listeners
-
-    breakOnNextUpdated: function(context)
-    {
-        this.dispatch("breakOnNextUpdated", arguments);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

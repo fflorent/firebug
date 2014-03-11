@@ -69,13 +69,15 @@ this.clickBreakOnNextButton = function(chrome, callback)
     if (!panel)
         throw new Error("Can't get the current panel");
 
-    panel.addListener({
-        breakOnNextUpdated: function(context)
+    var browser = FBTestFirebug.getCurrentTabBrowser();
+    DebuggerController.addListener(browser, {
+        breakOnNextUpdated: function()
         {
-            panel.removeListener(this);
+            DebuggerController.removeListener(browser, this);
             callback();
         }
     });
+
     // Do not use FBTest.click, toolbar buttons need to use sendMouseEvent.
     this.synthesizeMouse(button);
 };
