@@ -29,7 +29,6 @@ define([
     "firebug/lib/trace",
     "firebug/css/cssPanelUpdater",
     "firebug/lib/wrapper",
-    "firebug/lib/promise",
     "firebug/editor/baseEditor",
     "firebug/editor/editor",
     "firebug/editor/inlineEditor",
@@ -39,7 +38,7 @@ define([
 ],
 function(Panel, Obj, Firebug, Domplate, FirebugReps, Locale, Events, Url, SourceLink, Css, Dom,
     Win, Search, Str, Arr, Xml, Persist, System, Menu, Options, CSSAutoCompleter, CSSModule,
-    CSSInfoTip, SelectorEditor, FBTrace, CSSPanelUpdater, Wrapper, Promise, BaseEditor, Editor,
+    CSSInfoTip, SelectorEditor, FBTrace, CSSPanelUpdater, Wrapper, BaseEditor, Editor,
     InlineEditor, SourceEditor, SearchBox) {
 
 // ********************************************************************************************* //
@@ -182,7 +181,7 @@ var CSSKeyframesRuleTag = domplate(CSSDomplateBase,
     tag:
         DIV({"class": "cssRule focusRow cssKeyframesRule", _repObject: "$rule.rule"},
             DIV({"class": "cssHead focusRow", role : "listitem"},
-                SPAN({"class": "cssRuleName"}, "@-moz-keyframes"),
+                SPAN({"class": "cssRuleName"}, "@keyframes"),
                 SPAN({"class": "separator"}, " "),
                 SPAN({"class": "cssKeyframesRuleName", $editable: "$rule|isEditable"},
                 "$rule.rule.name"),
@@ -194,7 +193,7 @@ var CSSKeyframesRuleTag = domplate(CSSDomplateBase,
                 )
             ),
             DIV({role:"presentation"},
-            "}")
+                "}")
         )
 });
 
@@ -809,8 +808,7 @@ Firebug.CSSStyleSheetPanel.prototype = Obj.extend(Panel,
                         isNotEditable: true
                     });
                 }
-                else if ((window.CSSKeyframesRule && rule instanceof window.CSSKeyframesRule) ||
-                    rule instanceof window.MozCSSKeyframesRule)
+                else if (rule instanceof (window.CSSKeyframesRule || window.MozCSSKeyframesRule))
                 {
                     rules.push({
                         tag: CSSKeyframesRuleTag.tag,
@@ -819,8 +817,7 @@ Firebug.CSSStyleSheetPanel.prototype = Obj.extend(Panel,
                         isSystemSheet: isSystemSheet
                     });
                 }
-                else if ((window.CSSKeyframeRule && rule instanceof window.CSSKeyframeRule) ||
-                    rule instanceof window.MozCSSKeyframeRule)
+                else if (rule instanceof (window.CSSKeyframeRule || window.MozCSSKeyframeRule))
                 {
                     props = this.parseCSSProps(rule.style);
                     this.sortProperties(props);
@@ -1934,19 +1931,12 @@ Firebug.CSSStyleSheetPanel.prototype = Obj.extend(Panel,
 
         if (this.navigateToNextDocument(scanDoc, reverse, this.location))
         {
-            var deferred = Promise.defer();
+            // Force panel reflow, to make sure all nodes are immediatelly
+            // available for the search and we can avoid any weird timeouts.
+            this.panelNode.offsetHeight;
 
-            // firefox findService can't find nodes immediatly after insertion
-            // xxxHonza: the timeout has been increased to 100 since search across
-            // multiple documents didn't work sometimes.
-            // Of course, it would be great to get rid of the timeout.
-            setTimeout(() =>
-            {
-                var result = this.searchCurrentDoc(true, text, reverse);
-                deferred.resolve(result);
-            }, 100);
-
-            return deferred.promise;
+            // Now we should be able to synchronously search within the panel.
+            return this.searchCurrentDoc(true, text, reverse);
         }
     },
 
@@ -2175,8 +2165,7 @@ CSSEditor.prototype = domplate(InlineEditor.prototype,
         var rule = Firebug.getRepObject(cssRule);
 
         if (rule instanceof window.CSSStyleRule ||
-                ((window.CSSKeyframeRule && rule instanceof window.CSSKeyframeRule) ||
-                    rule instanceof window.MozCSSKeyframeRule) &&
+                (rule instanceof (window.CSSKeyframeRule || window.MozCSSKeyframeRule)) &&
                 !Css.hasClass(target, "cssKeyText") ||
             rule instanceof window.Element)
         {
@@ -2272,6 +2261,22 @@ CSSEditor.prototype = domplate(InlineEditor.prototype,
             var saveSuccess = (rule.conditionText == value);
             this.box.setAttribute("saveSuccess", saveSuccess);
         }
+        else if (((window.CSSKeyframesRule && rule instanceof window.CSSKeyframesRule) ||
+            rule instanceof window.MozCSSKeyframesRule))
+        {
+            target.textContent = value;
+            
+            if (FBTrace.DBG_CSS)
+            {
+                FBTrace.sysout("CSSEditor.saveEdit: @keyframes rule name: " +
+                    previousValue + "->" + value);
+            }
+            
+            rule.name = value;
+            
+            var saveSuccess = (rule.name == value);
+            this.box.setAttribute("saveSuccess", saveSuccess);
+        }
         else if (((window.CSSKeyframeRule && rule instanceof window.CSSKeyframeRule) ||
             rule instanceof window.MozCSSKeyframeRule) &&
             Css.hasClass(target, "cssKeyText"))
@@ -2280,7 +2285,7 @@ CSSEditor.prototype = domplate(InlineEditor.prototype,
 
             if (FBTrace.DBG_CSS)
             {
-                FBTrace.sysout("CSSEditor.saveEdit: @-moz-keyframe rule key: " +
+                FBTrace.sysout("CSSEditor.saveEdit: @keyframe rule key: " +
                     previousValue + "->" + value);
             }
 
