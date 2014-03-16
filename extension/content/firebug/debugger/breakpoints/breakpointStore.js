@@ -471,14 +471,32 @@ var BreakpointStore = Obj.extend(Module,
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-    getBreakpoints: function(url)
+    /**
+     * Returns existing breakpoints for give URL.
+     *
+     * @param {String} url URL for which breakpoints should be returned.
+     * @param {Boolean} dynamic If set to true return also dynamic breakpoints that belong
+     * to dynamic scripts created by the given URL.
+     */
+    getBreakpoints: function(url, dynamic)
     {
         Trace.sysout("BreakpointStore.getBreakpoints; url = " + url);
-        if (url)
+
+        if (url && !dynamic)
             return this.breakpoints[url] || [];
 
         var bps = [];
         var urls = this.getBreakpointURLs();
+
+        if (url && dynamic)
+        {
+            // Get all dynamic URLs for the given parent URL
+            urls = urls.filter(function(item, index, array)
+            {
+                return item.indexOf(url) == 0;
+            });
+        }
+
         for (var i = 0; i < urls.length; i++)
             bps.push.apply(bps, this.breakpoints[urls[i]] || []);
 
@@ -494,11 +512,11 @@ var BreakpointStore = Obj.extend(Module,
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     // Enumerators
 
-    enumerateBreakpoints: function(url, cb)
+    enumerateBreakpoints: function(url, dynamic, cb)
     {
         if (url)
         {
-            var urlBreakpointsTemp = this.getBreakpoints(url);
+            var urlBreakpointsTemp = this.getBreakpoints(url, dynamic);
             if (urlBreakpointsTemp)
             {
                 // Clone before iteration (the array can be modified in the callback).
@@ -522,17 +540,17 @@ var BreakpointStore = Obj.extend(Module,
             var bps = [];
             var urls = this.getBreakpointURLs();
             for (var i = 0; i < urls.length; i++)
-                bps.push(this.enumerateBreakpoints(urls[i], cb));
+                bps.push(this.enumerateBreakpoints(urls[i], dynamic, cb));
 
             return bps;
         }
     },
 
-    enumerateErrorBreakpoints: function(url, callback)
+    enumerateErrorBreakpoints: function(url, dynamic, callback)
     {
         if (url)
         {
-            var urlBreakpoints = this.getBreakpoints(url);
+            var urlBreakpoints = this.getBreakpoints(url, dynamic);
             if (urlBreakpoints)
             {
                 for (var i=0; i<urlBreakpoints.length; ++i)
@@ -550,11 +568,11 @@ var BreakpointStore = Obj.extend(Module,
         }
     },
 
-    enumerateMonitors: function(url, callback)
+    enumerateMonitors: function(url, dynamic, callback)
     {
         if (url)
         {
-            var urlBreakpoints = this.getBreakpoints(url);
+            var urlBreakpoints = this.getBreakpoints(url, dynamic);
             if (urlBreakpoints)
             {
                 for (var i=0; i<urlBreakpoints.length; ++i)
@@ -578,11 +596,12 @@ var BreakpointStore = Obj.extend(Module,
     {
         var result = [];
 
-        for (var url in context.compilationUnits)
+        context.enumerateSourceFiles(function(sourceFile)
         {
+            var url = sourceFile.getURL();
             var bps = this.getBreakpoints(url);
             result.push.apply(result, bps);
-        }
+        });
 
         return result;
     },

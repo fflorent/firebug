@@ -48,8 +48,8 @@ Firebug.Debugger = Obj.extend(ActivableModule,
 
         // xxxHonza: scoped logging should automate this (see firebug/lib/trace module).
         Firebug.registerTracePrefix("debuggerTool.", "DBG_DEBUGGERTOOL", false);
-        Firebug.registerTracePrefix("breakpointTool.", "DBG_BREAKPOINTTOOL", false);
         Firebug.registerTracePrefix("sourceTool.", "DBG_SOURCETOOL", false);
+        Firebug.registerTracePrefix("breakpointTool.", "DBG_BREAKPOINTTOOL", false);
 
         // Listen to the main client, which represents the connection to the server.
         // The main client object sends various events about attaching/detaching
@@ -83,6 +83,15 @@ Firebug.Debugger = Obj.extend(ActivableModule,
         setTooltip("fbStepIntoButton", "script.Step_Into", "F11");
         setTooltip("fbStepOverButton", "script.Step_Over", "F10");
         setTooltip("fbStepOutButton", "script.Step_Out", "Shift+F11");
+    },
+
+    initializeUI: function()
+    {
+        ActivableModule.initializeUI.apply(this, arguments);
+
+        // TODO move to script.js
+        this.filterButton = Firebug.chrome.$("fbScriptFilterMenu");
+        this.filterMenuUpdate();
     },
 
     shutdown: function()
@@ -509,12 +518,20 @@ Firebug.Debugger = Obj.extend(ActivableModule,
         var frame = context.stoppedFrame;
         if (!frame || !frame.scopes)
         {
+            //xxxHonza: Simon, I am seeing this a looot, is it a problem?
             TraceError.sysout("debugger.getCurrentFrameKeys; ERROR scopes: " +
                 (frame ? frame.scopes : "no stopped frame"));
             return;
         }
 
         var ret = [];
+
+        if (!frame.scopes)
+        {
+            TraceError.sysout("debugger.getCurrentFrameKyes; ERROR no scopes?");
+            return ret;
+        }
+
         for (var scope of frame.scopes)
         {
             // "this" is not a real scope.
@@ -565,23 +582,24 @@ Firebug.Debugger = Obj.extend(ActivableModule,
     {
         var menu = event.target;
         Options.set("scriptsFilter", menu.value);
+
         Firebug.Debugger.filterMenuUpdate();
     },
 
     menuFullLabel:
     {
         "static": Locale.$STR("ScriptsFilterStatic"),
-        evals: Locale.$STR("ScriptsFilterEval"),
-        events: Locale.$STR("ScriptsFilterEvent"),
-        all: Locale.$STR("ScriptsFilterAll"),
+        "evals": Locale.$STR("ScriptsFilterEval"),
+        "events": Locale.$STR("ScriptsFilterEvent"),
+        "all": Locale.$STR("ScriptsFilterAll"),
     },
 
     menuShortLabel:
     {
         "static": Locale.$STR("ScriptsFilterStaticShort"),
-        evals: Locale.$STR("ScriptsFilterEvalShort"),
-        events: Locale.$STR("ScriptsFilterEventShort"),
-        all: Locale.$STR("ScriptsFilterAllShort"),
+        "evals": Locale.$STR("ScriptsFilterEvalShort"),
+        "events": Locale.$STR("ScriptsFilterEventShort"),
+        "all": Locale.$STR("ScriptsFilterAllShort"),
     },
 
     onScriptFilterMenuPopupShowing: function(menu, context)
