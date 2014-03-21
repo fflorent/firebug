@@ -1,28 +1,28 @@
 /* See license.txt for terms of usage */
 
 define([
-    "firebug/chrome/panel",
-    "firebug/lib/object",
     "firebug/firebug",
-    "firebug/lib/domplate",
-    "firebug/lib/locale",
-    "firebug/lib/events",
+    "firebug/lib/array",
     "firebug/lib/css",
     "firebug/lib/dom",
-    "firebug/lib/xml",
-    "firebug/lib/url",
-    "firebug/lib/array",
-    "firebug/debugger/script/sourceLink",
-    "firebug/chrome/menu",
+    "firebug/lib/domplate",
+    "firebug/lib/events",
+    "firebug/lib/locale",
+    "firebug/lib/object",
     "firebug/lib/options",
-    "firebug/lib/string",
     "firebug/lib/persist",
+    "firebug/lib/string",
+    "firebug/lib/url",
+    "firebug/lib/xml",
+    "firebug/chrome/menu",
+    "firebug/chrome/panel",
     "firebug/css/cssModule",
     "firebug/css/cssReps",
     "firebug/css/loadHandler",
+    "firebug/debugger/script/sourceLink",
 ],
-function(Panel, Obj, Firebug, Domplate, Locale, Events, Css, Dom, Xml, Url, Arr, SourceLink, Menu,
-    Options, Str, Persist, CSSModule, CSSInfoTip, LoadHandler) {
+function(Firebug, Arr, Css, Dom, Domplate, Events, Locale, Obj, Options, Persist, Str, Url, Xml, 
+    Menu, Panel, CSSModule, CSSReps, LoadHandler, SourceLink) {
 
 "use strict";
 
@@ -63,7 +63,7 @@ CSSComputedPanel.prototype = Obj.extend(Panel,
     {
         computedStylesTag:
             DIV({"class": "a11yCSSView", role: "list", "aria-label":
-                Locale.$STR("aria.labels.computed styles")}),
+                Locale.$STR("a11y.labels.computed styles")}),
 
         groupedStylesTag:
             FOR("group", "$groups",
@@ -628,6 +628,8 @@ CSSComputedPanel.prototype = Obj.extend(Panel,
     showInfoTip: function(infoTip, target, x, y, rangeParent, rangeOffset)
     {
         var propValue = Dom.getAncestorByClass(target, "stylePropValue");
+        // xxxsz: This code is duplicated from CSSStyleSheetPanel. We should centralize the code somewhere,
+        // so it can be reused here
         if (propValue)
         {
             var propInfo = Firebug.getRepObject(target);
@@ -669,10 +671,10 @@ CSSComputedPanel.prototype = Obj.extend(Panel,
                 case "colorKeyword":
                     this.infoTipType = "color";
                     this.infoTipObject = cssValue.value;
-                    return CSSInfoTip.populateColorInfoTip(infoTip, cssValue.value);
+                    return CSSReps.CSSInfoTip.populateColorInfoTip(infoTip, cssValue.value);
 
                 case "url":
-                    if (Css.isImageRule(Xml.getElementSimpleType(propInfo), prop))
+                    if (Css.isImageProperty(prop))
                     {
                         var baseURL = typeof propInfo.href == "object" ? propInfo.href.href : propInfo.href;
                         if (!baseURL)
@@ -684,12 +686,12 @@ CSSComputedPanel.prototype = Obj.extend(Panel,
                         this.infoTipType = "image";
                         this.infoTipObject = absURL;
 
-                        return CSSInfoTip.populateImageInfoTip(infoTip, absURL, repeat);
+                        return CSSReps.CSSInfoTip.populateImageInfoTip(infoTip, absURL, repeat);
                     }
                     break;
 
                 case "fontFamily":
-                    return CSSInfoTip.populateFontFamilyInfoTip(infoTip, cssValue.value);
+                    return CSSReps.CSSInfoTip.populateFontFamilyInfoTip(infoTip, cssValue.value);
             }
 
             delete this.infoTipType;

@@ -1,47 +1,33 @@
 function runTest()
 {
-    FBTest.sysout("issue2976.START");
     FBTest.openNewTab(basePath + "css/2976/issue2976.html", function(win)
     {
-        FBTest.openFirebug();
-        FBTest.enableNetPanel(function(win)
+        FBTest.openFirebug(function()
         {
-            FW.Firebug.chrome.selectPanel("html");
-
-            FBTest.selectElementInHtmlPanel("myElement", function(node)
+            FBTest.enableNetPanel(function(win)
             {
-                // Reset clipboard content
-                FBTest.clearClipboard();
+                FW.Firebug.chrome.selectPanel("html");
 
-                var stylePanel = FW.Firebug.chrome.selectSidePanel("css");
-                var cssSelector = stylePanel.panelNode.querySelector(".cssSelector");
-                FBTest.executeContextMenuCommand(cssSelector, "fbCopyStyleDeclaration", function()
+                FBTest.selectElementInHtmlPanel("myElement", function(node)
                 {
-                    var backgroundColorValue = "";
-                    var colorValue = "";
+                    var stylePanel = FW.Firebug.chrome.selectSidePanel("css");
+                    var cssSelector = stylePanel.panelNode.getElementsByClassName("cssSelector")[0];
 
-                    // Since FF 22.0a2 inIDOMUtils has a function colorNameToRGB()
-                    if (FBTest.compareFirefoxVersion("22.0a2") >= 0)
+                    function executeContextMenuCommand()
                     {
-                        backgroundColorValue = "#FFFFE0";
-                        colorValue = "#FF0000";
-                    }
-                    else
-                    {
-                        backgroundColorValue = "LightYellow";
-                        colorValue = "red";
+                        FBTest.executeContextMenuCommand(cssSelector, "fbCopyStyleDeclaration");
                     }
 
-                    var expected = new RegExp("background-color: " + backgroundColorValue +
-                        ";\\s*color: " + colorValue + " !important;\\s*font-weight: bold;");
-                    FBTest.waitForClipboard(expected, function(cssDecl)
+                    var expected = new RegExp("background-color: LightYellow;\\s*" +
+                        "color: red !important;\\s*font-weight: bold;");
+                    FBTest.waitForClipboard(expected, executeContextMenuCommand, function(text)
                     {
-                        FBTest.compare(expected, cssDecl,
+                        FBTest.compare(expected, text,
                             "CSS declaration must be properly copied into the clipboard");
-                        FBTest.testDone("issue2976.DONE");
+                        FBTest.testDone();
                     });
-                });
-            })
+                })
+            });
         });
     });
 }

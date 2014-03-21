@@ -1,7 +1,5 @@
 function runTest()
 {
-    FBTest.sysout("issue601.START");
-
     // must be set to false in this test, but the original value is reverted.
     var prefOrigValue = FBTest.getPref("showXMLHttpRequests");
     FBTest.setPref("showXMLHttpRequests", false);
@@ -30,7 +28,7 @@ function runTest()
                 FBTest.compare(postElement.innerHTML, responseText, "Test response must match.");
 
                 FBTest.setPref("showXMLHttpRequests", prefOrigValue);
-                FBTest.testDone("issue601.DONE");
+                FBTest.testDone();
             });
 
             FBTest.click(win.document.getElementById("testButton"));

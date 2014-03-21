@@ -452,7 +452,8 @@ function JSAutoCompleter(textBox, completionBox, options)
             return "";
         var userTyped = this.textBox.value;
         var value = this.completionBase.pre + this.completionBase.expr + completion;
-        return userTyped + value.substr(userTyped.length);
+        var whitespace = " ".repeat(userTyped.length);
+        return whitespace + value.substr(userTyped.length);
     };
 
     /**
@@ -634,7 +635,8 @@ function JSAutoCompleter(textBox, completionBox, options)
 
     this.setTabWarning = function()
     {
-        this.completionBox.value = this.textBox.value + "    " +
+        var whitespace = " ".repeat(this.textBox.value.length);
+        this.completionBox.value = whitespace + "    " +
             Locale.$STR("firebug.completion.empty");
 
         this.tabWarning = true;
@@ -836,7 +838,7 @@ function JSAutoCompleter(textBox, completionBox, options)
                 {
                     var separator = this.completionPopup.ownerDocument.
                         createElementNS("http://www.w3.org/1999/xhtml", "div");
-                    separator.textContent = Locale.$STR("Firebug Command Line API");
+                    separator.textContent = Locale.$STR("console.Firebug_Command_Line_API");
                     separator.classList.add("fbPopupSeparator");
                     vbox.appendChild(separator);
 
@@ -1024,7 +1026,7 @@ JSAutoCompleter.transformScopeOperator = function(expr, fname)
 // ********************************************************************************************* //
 // CodeMirror auto-completer
 
-function codeMirrorAutoComplete(context, allowGlobal, attemptedCompletionOut, editor)
+function codeMirrorAutoComplete(context, allowGlobal, attemptedCompletionOut, sourceEditor, editor)
 {
     var cur = editor.getCursor(), line = cur.line;
     var token = editor.getTokenAt(cur);
@@ -1041,17 +1043,7 @@ function codeMirrorAutoComplete(context, allowGlobal, attemptedCompletionOut, ed
         multiLine: true,
         get additionalGlobalCompletions()
         {
-            var completions = [];
-            var addVars = function(vars)
-            {
-                for (var v = vars; v; v = v.next)
-                    completions.push(v.name);
-            };
-            addVars(token.state.localVars);
-            addVars(token.state.globalVars);
-            for (var c = token.state.context; c && c.vars; c = c.prev)
-                addVars(c.vars);
-            return completions;
+            return sourceEditor.getSurroundingVariablesFromCodeMirrorState(token.state);
         }
     };
     var completer = new JSAutoCompleter(null, null, options);
@@ -1841,9 +1833,6 @@ function propertiesToHide(expr, obj)
             "PaintRequest", "PaintRequestList", "WindowUtils",
             "GlobalPropertyInitializer", "GlobalObjectConstructor"
         );
-
-        // Hide ourselves.
-        ret.push("_firebug");
     }
 
     // Old and ugly.
@@ -1905,12 +1894,11 @@ function setCompletionsFromObject(out, object, context)
             var hideMap = Object.create(null);
             for (var i = 0; i < hide.length; ++i)
                 hideMap[hide[i]] = 1;
-            var hideRegex = /^XUL[A-Za-z]+$/;
 
             var newCompletions = [];
             out.completions.forEach(function(prop)
             {
-                if (prop in hideMap || hideRegex.test(prop))
+                if (prop in hideMap)
                     out.hiddenCompletions.push(prop);
                 else
                     newCompletions.push(prop);

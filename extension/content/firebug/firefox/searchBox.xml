@@ -9,7 +9,7 @@
 <!-- Searchbox is located in the main Firebug toolbar and can be used to search
     for a keyword within the current panel. -->
 <binding id="searchBox">
-    <content sizetopopup="none" align="center">
+    <content sizetopopup="none">
         <xul:textbox anonid="searchBox" flex="1" width="0"
             rows="1" label="search.Firebug_Search" class="fbsearch-textbox"
             onkeyup="onSearchBoxKeyUp(event, this);" aria-describedby="fbSearchBoxDescription">
@@ -25,7 +25,7 @@
             tooltiptext="search.tip.Next"
             role="menuitem"
             oncommand="searchNext();"/>
-        <xul:description anonid="fbSearchBoxDescription"  collapsed="true"/>
+        <xul:description anonid="fbSearchBoxDescription" collapsed="true"/>
         <xul:panel id="fbSearchOptionsPanel" norestorefocus="true" noautofocus="true"
             ignorekeys="true" role="presentation" type="arrow">
             <xul:vbox>
@@ -44,6 +44,15 @@
     <implementation>
         <constructor><![CDATA[
             var searchBox = document.getAnonymousElementByAttribute(this, "anonid", "searchBox");
+            var searchPrev = document.getAnonymousElementByAttribute(this, "anonid", "searchPrev");
+            var searchNext = document.getAnonymousElementByAttribute(this, "anonid", "searchNext");
+
+            FBL.internationalize(searchBox, "label");
+            FBL.internationalize(searchPrev, "label");
+            FBL.internationalize(searchPrev, "tooltiptext");
+            FBL.internationalize(searchNext, "label");
+            FBL.internationalize(searchNext, "tooltiptext");
+
             var optionsPopup = document.getElementById("fbSearchOptionsPanel");
 
             var self = this;
@@ -89,6 +98,8 @@
                     "searchBox");
                 searchBox.setAttribute("active-search", !!val);
                 searchBox.value = val;
+                searchBox.selectionStart = searchBox.value.length;
+                searchBox.selectionEnd = searchBox.value.length;
             ]]></xbl:setter>
         </property>
 
@@ -166,16 +177,6 @@
 
         <method name="showOptions">
             <body><![CDATA[
-                var searchBox = document.getAnonymousElementByAttribute(this, "anonid", "searchBox");
-                var searchPrev = document.getAnonymousElementByAttribute(this, "anonid", "searchPrev");
-                var searchNext = document.getAnonymousElementByAttribute(this, "anonid", "searchNext");
-
-                FBL.internationalize(searchBox, "label");
-                FBL.internationalize(searchPrev, "label");
-                FBL.internationalize(searchPrev, "tooltiptext");
-                FBL.internationalize(searchNext, "label");
-                FBL.internationalize(searchNext, "tooltiptext");
-
                 var searchMenu = document.getAnonymousElementByAttribute(this, "anonid",
                     "fbSearchOptionsMenu");
                 var searchDescription = document.getAnonymousElementByAttribute(this, "anonid",
@@ -187,7 +188,7 @@
                 if (searchDescription)
                 {
                     searchDescription.setAttribute("tooltiptext",
-                        FBL.$STR("a11y.labels.Press up or down arrow key for search options"));
+                        FBL.$STR("a11y.labels.Press_up_or_down"));
                 }
 
                 var optionsPopup = document.getElementById("fbSearchOptionsPanel");
@@ -216,13 +217,13 @@
 
         <method name="searchNext">
             <body><![CDATA[
-                this.status = Firebug.Search.searchNext(Firebug.currentContext);
+                Firebug.Search.searchNext(Firebug.currentContext);
             ]]></body>
         </method>
 
         <method name="searchPrev">
             <body><![CDATA[
-                this.status = Firebug.Search.searchPrev(Firebug.currentContext);
+                Firebug.Search.searchPrev(Firebug.currentContext);
             ]]></body>
         </method>
 

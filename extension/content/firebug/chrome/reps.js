@@ -230,6 +230,8 @@ FirebugReps.Func = domplate(Rep,
         {
             // XXX use Debugger.Object.displayName here?
             var name = regularFn[1] || fn.displayName || "function";
+            if ((name == "anonymous") && fn.displayName)
+                name = fn.displayName;
             var args = regularFn[2];
             result = name + args;
         }
@@ -276,19 +278,18 @@ FirebugReps.Func = domplate(Rep,
             FBTrace.sysout("reps.function.inspectObject selected sourceLink is ", sourceLink);
     },
 
+    getTooltipForScript: function(script)
+    {
+        return Locale.$STRF("Line", [Url.normalizeURL(script.url), script.startLine]);
+    },
+
     getTooltip: function(fn, context)
     {
         var script = SourceFile.findScriptForFunctionInContext(context, fn);
         if (script)
-        {
-            return Locale.$STRF("Line", [Url.normalizeURL(script.url),
-                script.startLine]);
-        }
-        else
-        {
-            if (fn.toString)
-                return fn.toString();
-        }
+            return this.getTooltipForScript(script);
+        if (fn.toString)
+            return fn.toString();
     },
 
     getTitle: function(fn, context)
@@ -998,6 +999,12 @@ FirebugReps.Element = domplate(Rep,
         return (limit > 0) ? Str.cropString(attr.value, limit) : attr.value;
     },
 
+    getAttrTitle: function(attr)
+    {
+        var newValue = this.getAttrValue(attr);
+        return (attr.value != newValue) ? attr.value : undefined;
+    },
+
     getVisible: function(elt)
     {
         return Xml.isVisible(elt) ? "" : "selectorHidden";
@@ -1139,9 +1146,15 @@ FirebugReps.Element = domplate(Rep,
         System.copyToClipboard(elt.innerHTML);
     },
 
-    copyXPath: function(elt)
+    copyMinimalXPath: function(elt)
     {
         var xpath = Xpath.getElementXPath(elt);
+        System.copyToClipboard(xpath);
+    },
+
+    copyXPath: function(elt)
+    {
+        var xpath = Xpath.getElementTreeXPath(elt);
         System.copyToClipboard(xpath);
     },
 
@@ -1153,53 +1166,12 @@ FirebugReps.Element = domplate(Rep,
 
     paste: function(elt, clipboardContent, mode)
     {
-        if (elt instanceof window.HTMLElement)
-            return this.pasteHTML.apply(this, arguments);
-        else
-            return this.pasteXML.apply(this, arguments);
-    },
-
-    pasteHTML: function(elt, clipboardContent, mode)
-    {
         if (mode === "replaceInner")
             elt.innerHTML = clipboardContent;
         else if (mode === "replaceOuter")
             elt.outerHTML = clipboardContent;
         else
             elt.insertAdjacentHTML(mode, clipboardContent);
-    },
-
-    pasteXML: function(elt, clipboardContent, mode)
-    {
-        var contextNode, parentNode = elt.parentNode;
-        if (["beforeBegin", "afterEnd", "replaceOuter"].indexOf(mode) >= 0)
-            contextNode = parentNode;
-        else
-            contextNode = elt;
-
-        var pastedElements = Dom.markupToDocFragment(clipboardContent, contextNode);
-        switch (mode)
-        {
-            case "beforeBegin":
-                parentNode.insertBefore(pastedElements, elt);
-                break;
-            case "afterBegin":
-                elt.insertBefore(pastedElements, elt.firstChild);
-                break;
-            case "beforeEnd":
-                elt.appendChild(pastedElements);
-                break;
-            case "afterEnd":
-                Dom.insertAfter(pastedElements, elt);
-                break;
-            case "replaceInner":
-                Dom.eraseNode(elt);
-                elt.appendChild(pastedElements);
-                break;
-            case "replaceOuter":
-                parentNode.replaceChild(pastedElements, elt);
-                break;
-        }
     },
 
     persistor: function(context, xpath)
@@ -1300,6 +1272,8 @@ FirebugReps.Element = domplate(Rep,
         var items = [];
         var clipboardContent = System.getStringDataFromClipboard();
         var isEltRoot = (elt === elt.ownerDocument.documentElement);
+        var minimalXPath = Xpath.getElementXPath(elt);
+        var absoluteXPath = Xpath.getElementTreeXPath(elt);
 
         if (Xml.isElementHTMLOrXHTML(elt))
             type = "HTML";
@@ -1314,28 +1288,46 @@ FirebugReps.Element = domplate(Rep,
 
         items.push(
         {
+            id: "fbCopyNode",
             label: Locale.$STRF("html.Copy_Node", [type]),
             tooltiptext: Locale.$STRF("html.tip.Copy_Node", [type]),
-            command: Obj.bindFixed(this.copyHTML, this, elt)
+            command: Obj.bindFixed(this.copyHTML, this, elt),
+            nol10n: true
         });
 
         if (Xml.isElementHTMLOrXHTML(elt))
         {
             items.push(
             {
+                id: "fbCopyInnerHTML",
                 label: "CopyInnerHTML",
                 tooltiptext: "html.tip.Copy_innerHTML",
                 command: Obj.bindFixed(this.copyInnerHTML, this, elt)
             });
         }
 
-        items = items.concat([
+        items.push(
             {
                 label: "CopyXPath",
                 tooltiptext: "html.tip.Copy_XPath",
                 id: "fbCopyXPath",
-                command: Obj.bindFixed(this.copyXPath, this, elt)
-            },
+                command: this.copyXPath.bind(this, elt)
+            }
+        );
+
+        if (minimalXPath != absoluteXPath)
+        {
+            items.push(
+                {
+                    label: "CopyMinimalXPath",
+                    tooltiptext: "html.tip.Copy_Minimal_XPath",
+                    id: "fbCopyMinimalXPath",
+                    command: this.copyMinimalXPath.bind(this, elt)
+                }
+            );
+        }
+
+        items = items.concat([
             {
                 label: "Copy_CSS_Path",
                 tooltiptext: "html.tip.Copy_CSS_Path",
@@ -1345,6 +1337,7 @@ FirebugReps.Element = domplate(Rep,
             {
                 label: Locale.$STRF("html.menu.Paste", [type]),
                 tooltiptext: Locale.$STRF("html.tip.Paste", [type]),
+                nol10n: true,
                 disabled: !clipboardContent,
                 id: "fbPaste",
                 items: [
@@ -1402,6 +1395,7 @@ FirebugReps.Element = domplate(Rep,
             items = items.concat([
                 "-",
                 {
+                    id: "fbOpenInNewTab",
                     label: "OpenInTab",
                     tooltiptext: "firebug.tip.Open_In_Tab",
                     command: Obj.bindFixed(this.browseObject, this, elt, context)
@@ -1413,6 +1407,7 @@ FirebugReps.Element = domplate(Rep,
         {
             items = items.concat([
                 {
+                    id: "fbReloadFrame",
                     label: "html.menu.Reload_Frame",
                     tooltiptext: "html.menu.tip.Reload_Frame",
                     command: Obj.bindFixed(this.reloadFrame, this, elt)
@@ -1672,13 +1667,11 @@ FirebugReps.CSSRule = domplate(Rep,
         {
             return "CSSCharsetRule";
         }
-        else if ((window.CSSKeyframesRule && rule instanceof window.CSSKeyframesRule) ||
-            rule instanceof window.MozCSSKeyframesRule)
+        else if (rule instanceof (window.CSSKeyframesRule || window.MozCSSKeyframesRule))
         {
             return "CSSKeyframesRule";
         }
-        else if ((window.CSSKeyframeRule && rule instanceof window.CSSKeyframeRule) ||
-            rule instanceof window.MozCSSKeyframeRule)
+        else if (rule instanceof (window.CSSKeyframeRule || window.MozCSSKeyframeRule))
         {
             return "CSSKeyframeRule";
         }
@@ -1725,13 +1718,11 @@ FirebugReps.CSSRule = domplate(Rep,
         {
             return rule.encoding;
         }
-        else if ((window.CSSKeyframesRule && rule instanceof window.CSSKeyframesRule) ||
-            rule instanceof window.MozCSSKeyframesRule)
+        else if (rule instanceof (window.CSSKeyframesRule || window.MozCSSKeyframesRule))
         {
             return rule.name;
         }
-        else if ((window.CSSKeyframeRule && rule instanceof window.CSSKeyframeRule) ||
-            rule instanceof window.MozCSSKeyframeRule)
+        else if (rule instanceof (window.CSSKeyframeRule || window.MozCSSKeyframeRule))
         {
             return rule.keyText;
         }

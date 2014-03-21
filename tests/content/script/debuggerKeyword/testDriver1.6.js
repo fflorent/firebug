@@ -7,32 +7,25 @@
  */
 function runTest()
 {
-    FBTest.sysout("debuggerKeyword.START");
-
     // Load test case page
-    FBTest.openNewTab(basePath + "script/debuggerKeyword/testPage.html",
-    function(testWindow)
+    FBTest.openNewTab(basePath + "script/debuggerKeyword/testPage.html", function(testWindow)
     {
-        // Open Firebug UI, select and enable Script panel.
-        FBTest.openFirebug();
         FBTest.clearCache();
-        FBTest.selectPanel("script");
-        FBTest.enableConsolePanel();
-        FBTest.enableScriptPanel(function(win)
+        FBTest.enablePanels(["script", "console"], function(win)
         {
             var doc = win.document;
 
             // List of tasks for this test.
             var taskList = new FBTest.TaskList();
-            taskList.push(executeTest, doc, "debuggerSimple", 32, true);
-            taskList.push(executeTest, doc, "debuggerShallow", 38, true);
-            taskList.push(executeTest, doc, "debuggerDeep", 64, true);
+            taskList.push(executeTest, doc, "debuggerSimple", 33, true);
+            taskList.push(executeTest, doc, "debuggerShallow", 39, true);
+            taskList.push(executeTest, doc, "debuggerDeep", 65, true);
             taskList.push(executeTest, doc, "debuggerInXHR", 14, false); // Disable is not supported for XHR.
             taskList.push(executeTest, doc, "debuggerInScript", 16, true);
 
             // Start all async tasks.
             taskList.run(function() {
-                FBTest.testDone("debuggerKeyword.DONE");
+                FBTest.testDone();
             });
         });
     });
@@ -101,7 +94,7 @@ function clickDisableButton(callback)
     var button = panel.panelNode.querySelector(".notificationButton.skipButton");
     if (!FBTest.ok(button, "There must be a balloon with 'Disable' button."))
     {
-        FBTest.testDone("debuggerKeyword.FAIL");
+        FBTest.testDone();
 
         // Will fail on timeout since the callback will never be executed.
         return;

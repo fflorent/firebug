@@ -340,13 +340,15 @@ var FirebugChrome =
 
     updateOption: function(name, value)
     {
-        // xxxHonza: I think we should distribute updateOption also to all panels
-        // in all contexts.
-        if (panelBar1 && panelBar1.selectedPanel)
-            panelBar1.selectedPanel.updateOption(name, value);
-
-        if (panelBar2 && panelBar2.selectedPanel)
-            panelBar2.selectedPanel.updateOption(name, value);
+        // Distributed 'updateOption' to all panels (main + side) in all
+        // existing contexts.
+        Firebug.TabWatcher.iterateContexts(function(context)
+        {
+            context.eachPanelInContext(function(panel)
+            {
+                panel.updateOption(name, value);
+            });
+        });
 
         if (name == "textSize")
             this.applyTextSize(value);
@@ -1208,19 +1210,35 @@ var FirebugChrome =
             return;
 
         var zoom = Options.getZoomByTextSize(value);
-        var zoomString = (zoom * 100) + "%";
+
+        var setRemSize = function(doc)
+        {
+            // Set the relative font size of the root element (<html> or <window>)
+            // so that 'rem' units can be used for sizing relative to the font size.
+            // 1rem equals 1px times the zoom level. This doesn't affect any of the
+            // UI, because <body>, #fbContentBox, etc. override the font-size.
+
+            doc.documentElement.style.fontSize = zoom + "px";
+        };
 
         // scale the aspect relative to 11pt Lucida Grande
         // xxxsz: The magic number 0.547 should be replaced some logic retrieving this value.
         var fontSizeAdjust = zoom * 0.547;
         var contentBox = Firebug.chrome.$("fbContentBox");
         contentBox.style.fontSizeAdjust = fontSizeAdjust;
+        setRemSize(contentBox.ownerDocument);
 
-        //panelBar1.browser.contentDocument.documentElement.style.fontSizeAdjust = fontSizeAdjust;
-        //panelBar2.browser.contentDocument.documentElement.style.fontSizeAdjust = fontSizeAdjust;
+        var setZoom = function(browser)
+        {
+            var doc = browser.contentDocument;
+            // doc.documentElement.style.fontSizeAdjust = fontSizeAdjust;
 
-        panelBar1.browser.markupDocumentViewer.textZoom = zoom;
-        panelBar2.browser.markupDocumentViewer.textZoom = zoom;
+            browser.markupDocumentViewer.textZoom = zoom;
+            setRemSize(doc);
+        };
+
+        setZoom(panelBar1.browser);
+        setZoom(panelBar2.browser);
 
         var cmdPopupBrowser = this.getElementById("fbCommandPopupBrowser");
         cmdPopupBrowser.markupDocumentViewer.textZoom = zoom;
@@ -1360,7 +1378,7 @@ var FirebugChrome =
         if (popup.id != "fbContextMenu")
             return;
 
-        var target = win.document.popupNode;
+        var target = popup.triggerNode;
         var panel = target ? Firebug.getElementPanel(target) : null;
 
         // The event must be on our chrome not inside the panel.
@@ -1414,7 +1432,8 @@ var FirebugChrome =
         // 1. Add the custom menu items from the realRep
         if (realObject && realRep)
         {
-            var items = realRep.getContextMenuItems(realObject, target, Firebug.currentContext);
+            var items = realRep.getContextMenuItems(realObject, target, Firebug.currentContext,
+                lastMouseDownPosition.clientX, lastMouseDownPosition.clientY);
             if (items)
                 Menu.createMenuItems(popup, items);
         }
@@ -1422,7 +1441,8 @@ var FirebugChrome =
         // 2. Add the custom menu items from the original rep
         if (object && rep && rep != realRep)
         {
-            var items = rep.getContextMenuItems(object, target, Firebug.currentContext);
+            var items = rep.getContextMenuItems(object, target, Firebug.currentContext,
+                lastMouseDownPosition.clientX, lastMouseDownPosition.clientY);
             if (items)
                 Menu.createMenuItems(popup, items);
         }
@@ -1430,7 +1450,8 @@ var FirebugChrome =
         // 3. Add the custom menu items from the panel
         if (panel)
         {
-            var items = panel.getContextMenuItems(realObject, target);
+            var items = panel.getContextMenuItems(realObject, target, null,
+                lastMouseDownPosition.clientX, lastMouseDownPosition.clientY);
             if (items)
                 Menu.createMenuItems(popup, items);
         }
@@ -1587,29 +1608,6 @@ var FirebugChrome =
                 "chrome,centerscreen,modal", "urn:mozilla:item:firebug@software.joehewitt.com",
                 extensionManager.datasource);
         }
-    },
-
-    breakOnNext: function(context, event)
-    {
-        // avoid bubbling from associated options
-        if (event.target.id != "cmd_firebug_toggleBreakOn")
-            return;
-
-        if (!context)
-        {
-            if (FBTrace.DBG_BP)
-                FBTrace.sysout("Firebug chrome: breakOnNext with no context??");
-            return;
-        }
-
-        var panel = panelBar1.selectedPanel;
-
-        if (FBTrace.DBG_BP)
-            FBTrace.sysout("Firebug chrome: breakOnNext for panel " +
-                (panel ? panel.name : "NO panel"), panel);
-
-        if (panel && panel.breakable)
-            Firebug.Breakpoint.toggleBreakOnNext(panel);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -1975,13 +1973,21 @@ function onPanelClick(event)
     }
 }
 
-var lastMouseDownPosition = {x: -1000, y: -1000};
+var lastMouseDownPosition = {
+    screenX: -1000,
+    screenY: -1000,
+    clientX: -1000,
+    clientY: -1000,
+};
+
 function onPanelMouseDown(event)
 {
-    if (Events.isLeftClick(event))
+    if (Events.isLeftClick(event) || Events.isRightClick(event))
     {
-        lastMouseDownPosition.x = event.screenX;
-        lastMouseDownPosition.y = event.screenY;
+        lastMouseDownPosition.screenX = event.screenX;
+        lastMouseDownPosition.screenY = event.screenY;
+        lastMouseDownPosition.clientX = event.clientX;
+        lastMouseDownPosition.clientY = event.clientY;
     }
     else if (Events.isMiddleClick(event, true) && Events.isControlAlt(event))
     {
@@ -2025,8 +2031,8 @@ function onPanelMouseUp(event)
 
                 if (selectedRange.collapsed)
                 {
-                    var distance = Math.abs(event.screenX - lastMouseDownPosition.x) +
-                        Math.abs(event.screenY - lastMouseDownPosition.y);
+                    var distance = Math.abs(event.screenX - lastMouseDownPosition.screenX) +
+                        Math.abs(event.screenY - lastMouseDownPosition.screenY);
 
                     // If mouse has moved far enough, set selection at that point
                     if (distance > 3 || Css.hasClass(event.target, "inlineExpander"))

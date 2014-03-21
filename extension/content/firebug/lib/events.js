@@ -1,26 +1,50 @@
 /* See license.txt for terms of usage */
-/*global define:1, Components:1, MouseEvent:1, Window: 1, Firebug:1*/
+/*global define:1, Components:1, MouseEvent:1, Firebug:1, window:1*/
 
 define([
     "firebug/lib/trace",
-    "firebug/lib/xpcom"
+    "firebug/lib/wrapper",
 ],
-function(FBTrace, Xpcom) {
+function(FBTrace, Wrapper) {
 
 "use strict";
 
 // ********************************************************************************************* //
 // Constants
 
-var Cu = Components.utils;
+var Cc = Components.classes;
+var Ci = Components.interfaces;
 
-var elService = Xpcom.CCSV("@mozilla.org/eventlistenerservice;1", "nsIEventListenerService");
+var elService = Cc["@mozilla.org/eventlistenerservice;1"].getService(Ci.nsIEventListenerService);
 
 // ********************************************************************************************* //
 // Implementation
 
 var Events = {};
 
+/**
+ * Synchronously dispatch an event to registered listeners. Return values of individual
+ * listeners are returned in an array.
+ *
+ * The return value can be useful especially in case of asynchronous event handling.
+ * Every listener handler can return a {@link Promise} that is collected in the result array
+ * and so the initiator has a chance to wait till all events (promises) are asynchronously
+ * finished.
+ *
+ * An example:
+ *
+ * var promises = Events.dispatch("onExampleEvent", [arg1, arg2]);
+ * Promise.all(promises).then(function()
+ * {
+ *     // All event handlers finished
+ * });
+ *
+ * @param {Array} listeners Array with registered listeners.
+ * @param {String} name Name of the event being dispatched.
+ * @param {Array} args Array with arguments passed to listeners along with the event.
+ *
+ * @returns {Array} Result array with return values from individual listeners.
+ */
 Events.dispatch = function(listeners, name, args)
 {
     if (!listeners)
@@ -37,13 +61,18 @@ Events.dispatch = function(listeners, name, args)
         if (FBTrace.DBG_DISPATCH)
             noMethods = [];
 
+        var results = [];
+
         for (var i = 0; i < listeners.length; ++i)
         {
             var listener = listeners[i];
             if (!listener)
             {
                 if (FBTrace.DBG_DISPATCH || FBTrace.DBG_ERRORS)
-                    FBTrace.sysout("Events.dispatch ERROR " + i + " " + name + " to null listener.");
+                {
+                    FBTrace.sysout("Events.dispatch ERROR " + i + " " + name +
+                        " to null listener.");
+                }
                 continue;
             }
 
@@ -51,9 +80,15 @@ Events.dispatch = function(listeners, name, args)
             {
                 try
                 {
-                    listener[name].apply(listener, args);
+                    var result = listener[name].apply(listener, args);
+
+                    // Store all valid results into the result array. The only invalid
+                    // type is undefined (null, 0 can be treated as valid results in some
+                    // cases).
+                    if (typeof result != "undefined")
+                        results.push(result);
                 }
-                catch(exc)
+                catch (exc)
                 {
                     if (FBTrace.DBG_ERRORS)
                     {
@@ -64,9 +99,12 @@ Events.dispatch = function(listeners, name, args)
                         }
 
                         var culprit = listeners[i] ? listeners[i].dispatchName : null;
-                        var loc = (exc.fileName ? exc.fileName + ":" + exc.lineNumber : "<unknown>");
+                        var loc = (exc.fileName ? exc.fileName + ":" +
+                            exc.lineNumber : "<unknown>");
+
                         FBTrace.sysout("EXCEPTION in Events.dispatch " +
-                            (culprit ? culprit + "." : "") + name + ": " + exc + " in " + loc, exc);
+                            (culprit ? culprit + "." : "") + name + ": " +
+                            exc + " in " + loc, exc);
                     }
                 }
             }
@@ -78,8 +116,10 @@ Events.dispatch = function(listeners, name, args)
         }
 
         if (FBTrace.DBG_DISPATCH)
-            FBTrace.sysout("Events.dispatch " + name + " to " + listeners.length + " listeners, " +
-                noMethods.length + " had no such method", noMethods);
+        {
+            FBTrace.sysout("Events.dispatch " + name + " to " + listeners.length +
+                " listeners, " + noMethods.length + " had no such method", noMethods);
+        }
     }
     catch (exc)
     {
@@ -88,7 +128,7 @@ Events.dispatch = function(listeners, name, args)
             if (exc.stack)
             {
                 var stack = exc.stack;
-                exc.stack = stack.split('\n');
+                exc.stack = stack.split("\n");
             }
 
             var culprit = listeners[i] ? listeners[i].dispatchName : null;
@@ -96,6 +136,8 @@ Events.dispatch = function(listeners, name, args)
                 name + ": " + exc, exc);
         }
     }
+
+    return results;
 };
 
 Events.dispatch2 = function(listeners, name, args)
@@ -233,7 +275,7 @@ Events.isShift = function(event)
 // ********************************************************************************************* //
 // DOM Events
 
-const eventTypes =
+var eventTypes =
 {
     composition: [
         "composition",
@@ -604,11 +646,7 @@ Events.getEventListenersForTarget = function(target)
         if (!listener.func || rawListener.inSystemEventGroup)
             continue;
 
-        var funcGlobal = Cu.getGlobalForObject(listener.func);
-        if (!(funcGlobal instanceof Window))
-            continue;
-
-        if (funcGlobal.document.nodePrincipal.subsumes(document.nodePrincipal))
+        if (Wrapper.isChromeObject(listener.func, window))
             continue;
 
         ret.push(listener);

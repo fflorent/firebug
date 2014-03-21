@@ -1,6 +1,5 @@
 function runTest()
 {
-    FBTest.sysout("testErrors.START");
     FBTest.openNewTab(basePath + "console/testErrors.html", function(win)
     {
         FBTest.selectPanel("console");
@@ -22,7 +21,7 @@ function fireTest(win, ith)
 
     if (ith >= buttons.length)
     {
-        FBTest.testDone("testErrors.done");
+        FBTest.testDone();
         return;
     }
 

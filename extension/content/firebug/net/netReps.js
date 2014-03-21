@@ -630,7 +630,11 @@ Firebug.NetMonitor.NetRequestEntry = domplate(Rep, new EventSource(),
             return false;
 
         //xxxsz: file.responseHeaders is undefined here for some reason
-        var resp = file.responseHeadersText.match(/www-authenticate:\s(.+)/i)[1];
+        var m = file.responseHeadersText.match(/www-authenticate:\s(.+)/i);
+        if (!m)
+            return false;
+
+        var resp = m[1];
         return (resp && resp.search(/ntlm|negotiate/i) >= 0);
     },
 
@@ -1299,6 +1303,9 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Rep, new EventSource(),
                             Locale.$STR("net.label.Parameters"),
                             SPAN({"class": "netInfoPostContentType"},
                                 "application/x-www-form-urlencoded"
+                            ),
+                            A({"class": "netPostParameterSort", onclick: "$onChangeSort"},
+                                "$object|getLabel"
                             )
                         )
                     )
@@ -1417,6 +1424,13 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Rep, new EventSource(),
             )
         ),
 
+    getLabel: function(object)
+    {
+        return Options.get("netSortPostParameters") ?
+            Locale.$STR("netParametersDoNotSort") :
+            Locale.$STR("netParametersSortAlphabetically");
+    },
+
     getParamValueIterator: function(param)
     {
         return Firebug.NetMonitor.NetInfoBody.getParamValueIterator(param);
@@ -1424,6 +1438,8 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Rep, new EventSource(),
 
     render: function(context, parentNode, file)
     {
+        Dom.clearNode(parentNode);
+
         var text = NetUtils.getPostText(file, context, true);
         if (text == undefined)
             return;
@@ -1472,7 +1488,7 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Rep, new EventSource(),
         if (!params || !params.length)
             return;
 
-        var paramTable = this.paramsTable.append(null, parentNode);
+        var paramTable = this.paramsTable.append({object: null}, parentNode);
         var row = paramTable.getElementsByClassName("netInfoPostParamsTitle").item(0);
 
         Firebug.NetMonitor.NetInfoBody.headerDataTag.insertRows({headers: params}, row);
@@ -1578,7 +1594,21 @@ Firebug.NetMonitor.NetInfoPostData = domplate(Rep, new EventSource(),
         }
 
         return postData;
-    }
+    },
+    
+    onChangeSort: function(event)
+    {
+        var target = event.target;
+        var netInfoBox = Dom.getAncestorByClass(target, "netInfoBody");
+        var panel = Firebug.getElementPanel(netInfoBox);
+        var file = Firebug.getRepObject(netInfoBox);
+        var postText = netInfoBox.getElementsByClassName("netInfoPostText").item(0);
+
+        Options.togglePref("netSortPostParameters");
+        Firebug.NetMonitor.NetInfoPostData.render(panel.context, postText, file);
+
+        Events.cancelEvent(event);
+    },
 });
 
 // ********************************************************************************************* //

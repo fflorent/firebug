@@ -454,11 +454,12 @@ var CommandLine = Obj.extend(Module,
         // else we may be hiding a panel while turning Firebug off
     },
 
-    toggleMultiLine: function(forceCommandEditor)
+    toggleCommandEditor: function(isMultiLine)
     {
-        var showCommandEditor = !!forceCommandEditor || !Firebug.commandEditor;
-        if (showCommandEditor != Firebug.commandEditor)
-            Options.set("commandEditor", showCommandEditor);
+        var context = Firebug.currentContext;
+        Options.set("commandEditor", isMultiLine);
+        Firebug.chrome.focus();
+        this.getCommandLine(context).focus();
     },
 
     checkOverflow: function(context)
@@ -666,7 +667,6 @@ var CommandLine = Obj.extend(Module,
         switch (event.keyCode)
         {
             case KeyEvent.DOM_VK_RETURN:
-            case KeyEvent.DOM_VK_ENTER:
                 event.preventDefault();
 
                 if (!event.metaKey && !event.shiftKey)

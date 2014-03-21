@@ -13,6 +13,8 @@ define([
 ],
 function(Firebug, FBTrace, Obj, Options, Events, TabWatcher, Firefox, Win, TabClient) {
 
+"use strict";
+
 // ********************************************************************************************* //
 // Constants
 
@@ -135,18 +137,14 @@ var DebuggerClient = Obj.extend(Firebug.Module,
         // Actors must be loaded at the time when basic browser actors are already available.
         // (i.e. addBrowserActors executed). Firebug actors can derive (or modify) existing
         // actor types.
-        /*var config = Firebug.getModuleLoaderConfig();
+        var config = Firebug.getModuleLoaderConfig();
         Firebug.require(config, [
-            //"firebug/debugger/actors/threadActor",
-            //"firebug/debugger/actors/objectActor"
-            //"firebug/debugger/actors/browserRootActor"
+            "firebug/debugger/actors/breakpointActor"
         ],
         function()
         {
             callback();
-        });*/
-
-        callback();
+        });
     },
 
     onActorsLoaded: function()
@@ -224,6 +222,8 @@ var DebuggerClient = Obj.extend(Firebug.Module,
         // Check if there is already a client object created for this tab browser.
         if (this.tabMap.has(browser))
             return this.getTabClient(browser);
+
+        Trace.sysout("debuggerClient.attachTab;");
 
         // There is one instance of {@link TabClient} per Firefox tab.
         var tab = new TabClient(browser, this.client);
@@ -373,6 +373,9 @@ var DebuggerClient = Obj.extend(Firebug.Module,
 
     getTabClient: function(browser)
     {
+        if (!browser)
+            return null;
+
         return this.tabMap.get(browser);
     },
 
@@ -382,6 +385,8 @@ var DebuggerClient = Obj.extend(Firebug.Module,
     onTabAttached: function(browser)
     {
         this.dispatch("onTabAttached", [browser, false]);
+
+        Firebug.dispatchEvent(browser, "onTabAttached");
     },
 
     onTabDetached: function(browser)
@@ -392,6 +397,8 @@ var DebuggerClient = Obj.extend(Firebug.Module,
     onThreadAttached: function(context)
     {
         this.dispatch("onThreadAttached", [context, false]);
+
+        Firebug.dispatchEvent(context.browser, "onThreadAttached");
     },
 
     onThreadDetached: function(context)
@@ -407,6 +414,29 @@ var DebuggerClient = Obj.extend(Firebug.Module,
         Trace.sysout("debuggerClient.dispatch; " + eventName, args);
 
         Firebug.Module.dispatch.apply(this, arguments);
+    },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+    isTabAttached: function(browser)
+    {
+        var tab = this.getTabClient(browser);
+        return tab ? (tab.tabClient != null) : false;
+    },
+
+    isThreadAttached: function(browser)
+    {
+        var tab = this.getTabClient(browser);
+        return tab ? (tab.activeThread != null) : false;
+    },
+
+    getThreadState: function(browser)
+    {
+        var tab = this.getTabClient(browser);
+        if (!tab || !tab.activeThread)
+            return;
+
+        return tab.activeThread.state;
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

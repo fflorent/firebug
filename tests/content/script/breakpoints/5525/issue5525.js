@@ -1,18 +1,13 @@
 function runTest()
 {
-    FBTest.sysout("issue5525.START");
     FBTest.openNewTab(basePath + "script/breakpoints/5525/issue5525.html", function(win)
     {
-        FBTest.openFirebug();
-        FBTest.enableScriptPanel();
-
-        FBTest.selectPanel("console");
-        FBTest.enableConsolePanel(function(win)
+        FBTest.enablePanels(["console", "script"], function(win)
         {
             var text = "var test = undefinedVariable;";
             FBTest.waitForDisplayedText("console", text, function()
             {
-                var panel = FBTest.getPanel("console");
+                var panel = FBTest.getSelectedPanel();
                 var row = panel.panelNode.getElementsByClassName("logRow-errorMessage")[0];
 
                 // Verify displayed text.
@@ -33,7 +28,7 @@ function runTest()
                 FBTest.compare(rows.length, 1, "There must be one breakpoint");
 
                 // Finish test
-                FBTest.testDone("issue5525.DONE");
+                FBTest.testDone();
             });
 
             FBTest.clickContentButton(win, "testButton");

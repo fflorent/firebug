@@ -186,6 +186,12 @@ BrowserOverlay.prototype =
         }, false);
     },
 
+    stopFirebug: function()
+    {
+        this.unloadContextMenuOverlay();
+        BrowserCommands.resetDisabledKeys(this.win);
+    },
+
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     // Firebug Menu Handlers
 
@@ -344,8 +350,8 @@ BrowserOverlay.prototype =
             var label = Str.capitalize(pos);
 
             var item = $menuitem(this.doc, {
-                label: Locale.$STR("firebug.menu." + label),
-                tooltiptext: Locale.$STR("firebug.menu.tip." + label),
+                label: "firebug.menu." + label,
+                tooltiptext: "firebug.menu.tip." + label,
                 type: "radio",
                 oncommand: oncommand.replace("%pos%", pos),
                 checked: (currPos == pos)

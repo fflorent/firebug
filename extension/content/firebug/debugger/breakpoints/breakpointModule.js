@@ -25,7 +25,11 @@ var Trace = FBTrace.to("DBG_BREAKPOINTMODULE");
 // ********************************************************************************************* //
 // Breakpoints
 
-Firebug.Breakpoint = Obj.extend(Firebug.Module,
+/**
+ * @module
+ */
+var BreakpointModule = Obj.extend(Firebug.Module,
+/** @lends BreakpointModule */
 {
     dispatchName: "BreakpointModule",
 
@@ -56,30 +60,6 @@ Firebug.Breakpoint = Obj.extend(Firebug.Module,
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     // BON
-
-    toggleBreakOnNext: function(panel)
-    {
-        var breakable = Firebug.chrome.getGlobalAttribute("cmd_firebug_toggleBreakOn", "breakable");
-
-        if (FBTrace.DBG_BP)
-        {
-            FBTrace.sysout("breakpoint.toggleBreakOnNext; currentBreakable " + breakable +
-                " in " + panel.context.getName());
-        }
-
-        // Toggle button's state.
-        breakable = (breakable == "true" ? "false" : "true");
-        Firebug.chrome.setGlobalAttribute("cmd_firebug_toggleBreakOn", "breakable", breakable);
-
-        // Call the current panel's logic related to break-on-next.
-        // If breakable == "true" the feature is currently disabled.
-        var enabled = (breakable == "true" ? false : true);
-        panel.breakOnNext(enabled);
-
-        this.updatePanelState(panel);
-
-        return enabled;
-    },
 
     showPanel: function(browser, panel)
     {
@@ -238,8 +218,14 @@ Firebug.Breakpoint = Obj.extend(Firebug.Module,
         {
             var location = packet.frame.where;
             var bp = BreakpointStore.findBreakpoint(location.url, location.line - 1);
+
+            // xxxHonza: hack, breakpoints in dynamic scripts are using different URLs., fix me.
             if (!bp)
-                return false;
+            {
+                TraceError.sysout("breakpointModule.shouldBreakDebugger; " +
+                    "Paused on a breakpoint, but there is no such breakpoint.", location);
+                return true;
+            }
 
             // If there is normal disabled breakpoint, do not break.
             if (bp.isNormal() && bp.isDisabled())
@@ -248,14 +234,20 @@ Firebug.Breakpoint = Obj.extend(Firebug.Module,
             // Evaluate optional condition
             if (bp.condition)
             {
-                Trace.sysout("debuggerTool.paused; Evaluate breakpoint condition: " +
+                Trace.sysout("breakpointModule.paused; on conditional breakpoint: " +
                     bp.condition, bp);
 
                 // xxxHonza: the condition-eval could be done server-side
-                // see: https://bugzilla.mozilla.org/show_bug.cgi?id=812172 
-                tool.eval(context.currentFrame, bp.condition);
-                context.conditionalBreakpointEval = true;
-                return false;
+                // see: https://bugzilla.mozilla.org/show_bug.cgi?id=812172
+                //
+                // For now, Firebug modifies the server side BreakpointActor
+                // See: {@link module:firebug/debugger/actors/breakpointActor}
+                //
+                // tool.eval(context.currentFrame, bp.condition);
+                // context.conditionalBreakpointEval = true;
+                // return false;
+
+                return true;
             }
         }
 
@@ -266,7 +258,7 @@ Firebug.Breakpoint = Obj.extend(Firebug.Module,
 
             var result = packet.why.frameFinished["return"];
 
-            Trace.sysout("debuggerTool.paused; Breakpoint condition evaluated: " +
+            Trace.sysout("breakpointModule.paused; Breakpoint condition evaluated: " +
                 result, result);
 
             // Resume debugger if the breakpoint condition evaluation is false
@@ -291,9 +283,11 @@ Firebug.Breakpoint = Obj.extend(Firebug.Module,
 // ********************************************************************************************* //
 // Registration
 
-Firebug.registerModule(Firebug.Breakpoint);
+Firebug.registerModule(BreakpointModule);
 
-return Firebug.Breakpoint;
+Firebug.Breakpoint = BreakpointModule;
+
+return BreakpointModule;
 
 // ********************************************************************************************* //
 });

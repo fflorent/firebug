@@ -11,13 +11,14 @@ define([
     "firebug/chrome/firefox",
     "firebug/chrome/tabWatcher",
     "firebug/chrome/activableModule",
+    "firebug/debugger/breakpoints/breakpointStore",
     "firebug/debugger/debuggerHalter",
     "firebug/debugger/debuggerLib",
     "firebug/debugger/clients/clientCache",
     "firebug/remoting/debuggerClient",
 ],
 function(Firebug, FBTrace, Obj, Locale, Options, Firefox, TabWatcher, ActivableModule,
-    DebuggerHalter, DebuggerLib, ClientCache, DebuggerClient) {
+    BreakpointStore, DebuggerHalter, DebuggerLib, ClientCache, DebuggerClient) {
 
 "use strict";
 
@@ -47,8 +48,8 @@ Firebug.Debugger = Obj.extend(ActivableModule,
 
         // xxxHonza: scoped logging should automate this (see firebug/lib/trace module).
         Firebug.registerTracePrefix("debuggerTool.", "DBG_DEBUGGERTOOL", false);
-        Firebug.registerTracePrefix("breakpointTool.", "DBG_BREAKPOINTTOOL", false);
         Firebug.registerTracePrefix("sourceTool.", "DBG_SOURCETOOL", false);
+        Firebug.registerTracePrefix("breakpointTool.", "DBG_BREAKPOINTTOOL", false);
 
         // Listen to the main client, which represents the connection to the server.
         // The main client object sends various events about attaching/detaching
@@ -68,18 +69,29 @@ Firebug.Debugger = Obj.extend(ActivableModule,
         chrome.setGlobalAttribute("cmd_firebug_stepOut", "oncommand",
             "Firebug.Debugger.stepOut(Firebug.currentContext)");
 
-        // Set tooltips to stepping buttons.
-        Firebug.chrome.$("fbRerunButton").setAttribute("tooltiptext",
-            Locale.$STRF("firebug.labelWithShortcut", [Locale.$STR("script.Rerun"), "Shift+F8"]));
-        Firebug.chrome.$("fbContinueButton").setAttribute("tooltiptext",
-            Locale.$STRF("firebug.labelWithShortcut", [Locale.$STR("script.Continue"), "F8"]));
-        Firebug.chrome.$("fbStepIntoButton").setAttribute("tooltiptext",
-            Locale.$STRF("firebug.labelWithShortcut", [Locale.$STR("script.Step_Into"), "F11"]));
-        Firebug.chrome.$("fbStepOverButton").setAttribute("tooltiptext",
-            Locale.$STRF("firebug.labelWithShortcut", [Locale.$STR("script.Step_Over"), "F10"]));
-        Firebug.chrome.$("fbStepOutButton").setAttribute("tooltiptext",
-            Locale.$STRF("firebug.labelWithShortcut",
-                [Locale.$STR("script.Step_Out"), "Shift+F11"]));
+        // Set tooltips for stepping buttons.
+        var setTooltip = function(id, tooltip, shortcut)
+        {
+            tooltip = Locale.$STRF("firebug.labelWithShortcut", [Locale.$STR(tooltip), shortcut]);
+            Firebug.chrome.$(id).setAttribute("tooltiptext", tooltip);
+        };
+
+        // Commented until Debugger.Frame.prototype.replaceCall is implemented. 
+        // See issue 6789 + bugzilla #976708.
+        // setTooltip("fbRerunButton", "script.Rerun", "Shift+F8");
+        setTooltip("fbContinueButton", "script.Continue", "F8");
+        setTooltip("fbStepIntoButton", "script.Step_Into", "F11");
+        setTooltip("fbStepOverButton", "script.Step_Over", "F10");
+        setTooltip("fbStepOutButton", "script.Step_Out", "Shift+F11");
+    },
+
+    initializeUI: function()
+    {
+        ActivableModule.initializeUI.apply(this, arguments);
+
+        // TODO move to script.js
+        this.filterButton = Firebug.chrome.$("fbScriptFilterMenu");
+        this.filterMenuUpdate();
     },
 
     shutdown: function()
@@ -205,6 +217,11 @@ Firebug.Debugger = Obj.extend(ActivableModule,
         // rather dispatch a message to an object that is created for every context?
         TabWatcher.iterateContexts(function(context)
         {
+            // Attach to the current thread. If the tab-attach sequence (that must happen
+            // before) is currently in progress the {@link TabClient} object sets a flag
+            // and will attach the thread as soon as the tab is attached.
+            // If there is no instance of {@link TabClient} for the current browser,
+            // the tab-attach sequence didn't started yet.
             var tab = DebuggerClient.getTabClient(context.browser);
             if (tab)
                 tab.attachThread();
@@ -290,19 +307,24 @@ Firebug.Debugger = Obj.extend(ActivableModule,
     {
     },
 
-    clearAllBreakpoints: function(context)
+    clearAllBreakpoints: function(context, callback)
+    {
+        // xxxHonza: at some point we might want to remove only breakpoints created
+        // for given context. This must be supported by the {@link BreakpointStore}
+
+        // Remove all breakpoints from all contexts.
+        BreakpointStore.removeAllBreakpoints(callback);
+    },
+
+    enableAllBreakpoints: function(context, callback)
     {
     },
 
-    enableAllBreakpoints: function(context)
+    disableAllBreakpoints: function(context, callback)
     {
     },
 
-    disableAllBreakpoints: function(context)
-    {
-    },
-
-    getBreakpointCount: function(context)
+    getBreakpointCount: function(context, callback)
     {
     },
 
@@ -415,6 +437,11 @@ Firebug.Debugger = Obj.extend(ActivableModule,
         // Used by FBTest
     },
 
+    /**
+     * Breaks the debugger in the newest frame (if any) or in the debuggee global.
+     *
+     * @param {*} context
+     */
     breakNow: function(context)
     {
         DebuggerHalter.breakNow(context);
@@ -489,7 +516,22 @@ Firebug.Debugger = Obj.extend(ActivableModule,
     getCurrentFrameKeys: function(context)
     {
         var frame = context.stoppedFrame;
+        if (!frame || !frame.scopes)
+        {
+            //xxxHonza: Simon, I am seeing this a looot, is it a problem?
+            TraceError.sysout("debugger.getCurrentFrameKeys; ERROR scopes: " +
+                (frame ? frame.scopes : "no stopped frame"));
+            return;
+        }
+
         var ret = [];
+
+        if (!frame.scopes)
+        {
+            TraceError.sysout("debugger.getCurrentFrameKyes; ERROR no scopes?");
+            return ret;
+        }
+
         for (var scope of frame.scopes)
         {
             // "this" is not a real scope.
@@ -513,6 +555,7 @@ Firebug.Debugger = Obj.extend(ActivableModule,
             for (var prop of props)
                 ret.push(prop.name);
         }
+
         return ret;
     },
 
@@ -539,23 +582,24 @@ Firebug.Debugger = Obj.extend(ActivableModule,
     {
         var menu = event.target;
         Options.set("scriptsFilter", menu.value);
+
         Firebug.Debugger.filterMenuUpdate();
     },
 
     menuFullLabel:
     {
         "static": Locale.$STR("ScriptsFilterStatic"),
-        evals: Locale.$STR("ScriptsFilterEval"),
-        events: Locale.$STR("ScriptsFilterEvent"),
-        all: Locale.$STR("ScriptsFilterAll"),
+        "evals": Locale.$STR("ScriptsFilterEval"),
+        "events": Locale.$STR("ScriptsFilterEvent"),
+        "all": Locale.$STR("ScriptsFilterAll"),
     },
 
     menuShortLabel:
     {
         "static": Locale.$STR("ScriptsFilterStaticShort"),
-        evals: Locale.$STR("ScriptsFilterEvalShort"),
-        events: Locale.$STR("ScriptsFilterEventShort"),
-        all: Locale.$STR("ScriptsFilterAllShort"),
+        "evals": Locale.$STR("ScriptsFilterEvalShort"),
+        "events": Locale.$STR("ScriptsFilterEventShort"),
+        "all": Locale.$STR("ScriptsFilterAllShort"),
     },
 
     onScriptFilterMenuPopupShowing: function(menu, context)

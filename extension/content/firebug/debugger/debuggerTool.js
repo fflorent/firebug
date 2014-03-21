@@ -1,19 +1,17 @@
 /* See license.txt for terms of usage */
+/*jshint noempty:false, esnext:true, curly:false, moz:true*/
+/*global define:1*/
 
 define([
     "firebug/firebug",
     "firebug/lib/trace",
     "firebug/lib/object",
-    "firebug/lib/array",
     "firebug/lib/options",
     "firebug/chrome/tool",
     "firebug/debugger/stack/stackFrame",
     "firebug/debugger/stack/stackTrace",
-    "firebug/debugger/clients/clientCache",
-    "arch/compilationunit",
 ],
-function (Firebug, FBTrace, Obj, Arr, Options, Tool, StackFrame, StackTrace,
-    ClientCache, CompilationUnit) {
+function (Firebug, FBTrace, Obj, Options, Tool, StackFrame, StackTrace) {
 
 "use strict";
 
@@ -181,7 +179,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 
         // xxxHonza: this check should go somewhere else.
         // xxxHonza: this might be also done by removing/adding listeners.
-        // If the Script panel is disabled (not created for the current context,
+        // If the Script panel is disabled (not created for the current context),
         // the debugger should not break.
         if (this.context.getPanel("script") == null)
         {
@@ -207,7 +205,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
         this.context.currentPauseActor = packet.actor;
 
         // Notify listeners, about debugger pause event.
-        this.dispatch("onDebuggerPaused", [this.context, event, packet])
+        this.dispatch("onDebuggerPaused", [this.context, event, packet]);
 
         // Send event allowing immediate resume. If at least one listener returns
         // true, the debugger will resume.
@@ -218,7 +216,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
         }
 
         // Send event asking whether the debugger should really break. If at least
-        // one listeners returns true, the debugger just continues with pause.
+        // one listeners returns true, the debugger will resume.
         if (!this.dispatch2("shouldBreakDebugger", [this.context, event, packet]))
         {
             Trace.sysout("debuggerTool.paused; Listeners don't want to break the debugger.");
@@ -255,6 +253,8 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
     {
         Trace.sysout("debuggerTool.resumed; currently stopped: " +
             this.context.stopped, arguments);
+
+        Firebug.dispatchEvent(this.context.browser, "onResumed");
 
         // When Firebug is attached to the {@link ThreadClient} object the debugger is paused.
         // As soon as all initialization steps are done {@link TabClient} resumes the
@@ -344,7 +344,11 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
         Trace.sysout("debuggerTool.resume; limit: " + (limit ? limit.type: "no type"), limit);
 
         // xxxHonza: do not use _doResume. Use stepping methods instead.
-        return this.context.activeThread._doResume(limit, callback);
+        return this.context.activeThread._doResume(limit, (response) =>
+        {
+            if (callback)
+                callback();
+        });
     },
 
     stepOver: function(callback)
@@ -353,7 +357,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 
         // The callback must be passed into the stepping functions, otherwise there is
         // an exception.
-        return this.context.activeThread.stepOver(function()
+        return this.context.activeThread.stepOver(function(response)
         {
             if (callback)
                 callback();
@@ -364,7 +368,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
     {
         Trace.sysout("debuggerTool.stepInto");
 
-        return this.context.activeThread.stepIn(function()
+        return this.context.activeThread.stepIn(function(response)
         {
             if (callback)
                 callback();
@@ -375,7 +379,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
     {
         Trace.sysout("debuggerTool.stepOut");
 
-        return this.context.activeThread.stepOut(function()
+        return this.context.activeThread.stepOut(function(response)
         {
             if (callback)
                 callback();
@@ -444,7 +448,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             {
                 TraceError.sysout("debuggerTool.evalCallback; EXCEPTION " + e, e);
             }
-        }
+        };
     },
 
     // xxxHonza: used to get boolean result of evaluated breakpoint condition
@@ -471,7 +475,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     // Break On Exceptions
 
-    updateBreakOnErrors: function()
+    updateBreakOnErrors: function(callback)
     {
         // Either 'breakOnExceptions' option can be set (from within the Script panel options
         // menu) or 'break on next' (BON) can be activated (on the Console panel).
@@ -482,12 +486,18 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             ", ignore: " + ignore + ", thread paused: " + this.context.activeThread.paused +
             ", context stopped: " + this.context.stopped);
 
-        return this.context.activeThread.pauseOnExceptions(pause, ignore, function(response)
+        return this.context.activeThread.pauseOnExceptions(pause, ignore, (response) =>
         {
             Trace.sysout("debuggerTool.updateBreakOnErrors; response received:", response);
+            if (callback)
+                callback(this.context, pause, ignore);
         });
     },
 });
+
+// ********************************************************************************************* //
+// Helpers
+
 
 // ********************************************************************************************* //
 // Registration

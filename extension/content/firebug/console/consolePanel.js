@@ -40,8 +40,8 @@ var {domplate, DIV, SPAN, TD, TR, TABLE, TBODY, P, A} = Domplate;
 
 var reAllowedCss = /^(-moz-)?(background|border|color|font|line|margin|padding|text)/;
 
-const Cc = Components.classes;
-const Ci = Components.interfaces;
+var Cc = Components.classes;
+var Ci = Components.interfaces;
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -337,6 +337,8 @@ ConsolePanel.prototype = Obj.extend(ActivablePanel,
                 "console.option.tip.Show_Network_Errors"),
             this.getShowStackTraceMenuItem(),
             this.getStrictOptionMenuItem(),
+            Menu.optionMenu("console.option.Group_Log_Messages", "console.groupLogMessages",
+                "console.option.tip.Group_Log_Messages"),
             "-",
             Menu.optionMenu("console.option.Show_Command_Editor", "commandEditor",
                 "console.option.tip.Show_Command_Editor"),
@@ -467,7 +469,7 @@ ConsolePanel.prototype = Obj.extend(ActivablePanel,
 
         var search = new Search.TextSearch(this.panelNode, findRow);
 
-        var logRow = search.find(text, false, Firebug.Search.isCaseSensitive(text));
+        var logRow = search.find(text, false, SearchBox.isCaseSensitive(text));
         if (!logRow)
         {
             Events.dispatch(this.fbListeners, "onConsoleSearchMatchFound", [this, text, []]);
@@ -475,7 +477,7 @@ ConsolePanel.prototype = Obj.extend(ActivablePanel,
         }
 
         for (; logRow; logRow = search.findNext(undefined, undefined, undefined,
-            Firebug.Search.isCaseSensitive(text)))
+            SearchBox.isCaseSensitive(text)))
         {
             if (this.matchesFilter(logRow))
             {
@@ -504,7 +506,7 @@ ConsolePanel.prototype = Obj.extend(ActivablePanel,
     onFiltersSet: function(filterTypes)
     {
         this.setFilter(filterTypes);
-        Firebug.Search.update(this.context);
+        SearchBox.update(this.context);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -1089,14 +1091,22 @@ ConsolePanel.prototype = Obj.extend(ActivablePanel,
         if (type != "exception")
             return;
 
-        if (!this.shouldBreakOnNext())
+        if (!this.shouldBreakOnNext() && !Options.get("breakOnExceptions"))
+        {
+            Trace.sysout("consolePanel.onDebuggerPaused; Break on error not active.");
             return;
+        }
 
         // Reset the break-on-next-error flag after an exception break happens.
         // xxxHonza: this is how the other BON implementations work, but we could reconsider it.
         // Another problem is that the debugger breaks in every frame by default, which
         // is avoided by reseting of the flag.
         this.breakOnNext(false)
+
+        // At this point, the BON flag is reset and can't be used anymore in |shouldResumeDebugger|.
+        // So add a custom flag in packet.why so we know that the debugger is paused because of
+        // either the Console's "Break On Next" or the Script's "Break On Exceptions" option.
+        packet.why.fbPauseDueToBONError = true;
 
         // Get the exception object.
         var exc = DebuggerLib.getObject(context, packet.why.exception.actor);
@@ -1118,7 +1128,6 @@ ConsolePanel.prototype = Obj.extend(ActivablePanel,
         // Make sure the break notification popup appears.
         context.breakingCause =
         {
-            title: Locale.$STR("Break on Error"),
             message: error.message,
             copyAction: Obj.bindFixed(FirebugReps.ErrorMessage.copyError,
                 FirebugReps.ErrorMessage, error),
@@ -1145,10 +1154,15 @@ ConsolePanel.prototype = Obj.extend(ActivablePanel,
         if (!exc)
             return false;
 
-        // If 'break on exceptions' is set don't resume the debugger, the user wants
-        // to break and see where it happens.
-        if (Options.get("breakOnExceptions"))
-            return false;
+        // If 'Break On Exceptions' or 'Break On All Errors' are not set, ignore (return true).
+        // Otherwise, don't resume the debugger. The user wants to break and see
+        // where the error happens.
+        if (!packet.why.fbPauseDueToBONError)
+        {
+            Trace.sysout("consolePanel.shouldResumeDebugger; Do not break, " +
+                "packet.why.fbPauseDueToBONError == false");
+            return true;
+        }
 
         if (BreakpointStore.isBreakpointDisabled(exc.fileName, exc.lineNumber - 1))
         {
@@ -1156,10 +1170,20 @@ ConsolePanel.prototype = Obj.extend(ActivablePanel,
             return true;
         }
 
-        if (!context.breakingCause)
+        var preview = packet.why.exception.preview;
+        if (!preview)
         {
-            // This is to avoid repeated break-on-error in every frame when an error happens.
-            Trace.sysout("context.breakingCause; No breaking cause, resume debugger");
+            TraceError.sysout("consolePanel.shouldResumeDebugger; ERROR preview info isn't" +
+                "available for the exception", packet);
+            return false;
+        }
+
+        // This is to avoid repeated break-on-error in every frame when an error happens.
+        // Break only if the original location of the exception is the same as the
+        // location of the current frame.
+        if (preview.lineNumber != packet.frame.where.line)
+        {
+            Trace.sysout("consolePanel.shouldResumeDebugger; Do not break, we did already");
             return true;
         }
 
@@ -1174,7 +1198,7 @@ ConsolePanel.prototype = Obj.extend(ActivablePanel,
         return this.context.breakOnErrors;
     },
 
-    breakOnNext: function(breaking)
+    breakOnNext: function(breaking, callback)
     {
         Trace.sysout("consolePanel.breakOnNext;");
 
@@ -1182,7 +1206,7 @@ ConsolePanel.prototype = Obj.extend(ActivablePanel,
 
         // Set the flag on the server.
         var tool = this.context.getTool("debugger");
-        tool.updateBreakOnErrors();
+        tool.updateBreakOnErrors(callback);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

@@ -22,9 +22,6 @@ var pre27 = (comparator.compare(appInfo.version, "27.0*") < 0);
 var global = Cu.getGlobalForObject({});
 Cu.import("resource://gre/modules/jsdebugger.jsm", {}).addDebuggerToGlobal(global);
 
-// Debuggees
-var dbgGlobalWeakMap = new WeakMap();
-
 // Module object
 var DebuggerLib = {};
 
@@ -67,7 +64,9 @@ DebuggerLib.getInactiveDebuggeeGlobal = function(context, global)
 {
     global = global || context.getCurrentGlobal();
 
-    var dbgGlobal = dbgGlobalWeakMap.get(global.document);
+    if (!context.inactiveDbgGlobalWeakMap)
+        context.inactiveDbgGlobalWeakMap = new WeakMap();
+    var dbgGlobal = context.inactiveDbgGlobalWeakMap.get(global.document);
     if (!dbgGlobal)
     {
         var dbg = getInactiveDebuggerForContext(context);
@@ -87,7 +86,7 @@ DebuggerLib.getInactiveDebuggeeGlobal = function(context, global)
             dbgGlobal = dbg.addDebuggee(contentView);
             dbg.removeDebuggee(contentView);
         }
-        dbgGlobalWeakMap.set(global.document, dbgGlobal);
+        context.inactiveDbgGlobalWeakMap.set(global.document, dbgGlobal);
 
         if (FBTrace.DBG_DEBUGGER)
             FBTrace.sysout("new debuggee global instance created", dbgGlobal);
@@ -103,9 +102,6 @@ DebuggerLib._closureInspectionRequiresDebugger = function()
 
 /**
  * Runs a callback with a debugger for a global temporarily enabled.
- *
- * Currently this throws an exception unless the Script panel is enabled, because
- * otherwise debug GCs kill us.
  */
 DebuggerLib.withTemporaryDebugger = function(context, global, callback)
 {
@@ -210,6 +206,13 @@ DebuggerLib.getThreadActor = function(browser)
     {
         TraceError.sysout("debuggerClient.getObject; EXCEPTION " + e, e);
     }
+};
+
+DebuggerLib.getThreadDebugger = function(context)
+{
+    var threadActor = this.getThreadActor(context.browser);
+    if (threadActor)
+        return threadActor.dbg;
 };
 
 /**
@@ -432,16 +435,31 @@ DebuggerLib.getFrameResultObject = function(context)
 // ********************************************************************************************* //
 // Debugger
 
+/**
+ * Breaks the debugger in the newest frame (if any) or in the debuggee global.
+ * Should not be used directly. Instead use Debugger.breakNow()
+ *
+ * @param {*} context
+ */
 DebuggerLib.breakNow = function(context)
 {
-    // getInactiveDebuggeeGlobal uses the current global (i.e. stopped frame, current
-    // iframe or top level window associated with the context object).
-    // There can be cases (e.g. BON XHR) where the current window is an iframe, but
-    // the event the debugger breaks on - comes from top level window (or vice versa).
-    // For now there are not known problems, but we might want to use the second
-    // argument of the getInactiveDebuggeeGlobal() and pass explicit global object.
-    var dbgGlobal = this.getInactiveDebuggeeGlobal(context);
-    return dbgGlobal.evalInGlobal("debugger");
+    var actor = DebuggerLib.getThreadActor(context.browser);
+    var frame = actor.dbg.getNewestFrame();
+    if (frame)
+    {
+        return frame.eval("debugger;");
+    }
+    else
+    {
+        // getInactiveDebuggeeGlobal uses the current global (i.e. stopped frame, current
+        // iframe or top level window associated with the context object).
+        // There can be cases (e.g. BON XHR) where the current window is an iframe, but
+        // the event the debugger breaks on - comes from top level window (or vice versa).
+        // For now there are not known problems, but we might want to use the second
+        // argument of the getInactiveDebuggeeGlobal() and pass explicit global object.
+        var dbgGlobal = this.getInactiveDebuggeeGlobal(context);
+        return dbgGlobal.evalInGlobal("debugger;");
+    }
 };
 
 DebuggerLib.makeDebugger = function()
@@ -503,6 +521,38 @@ DebuggerLib.destroyDebuggerForContext = function(context, dbg)
     var ind = context.debuggers.indexOf(dbg);
     if (ind !== -1)
         context.debuggers.splice(ind, 1);
+};
+
+// ********************************************************************************************* //
+// Breakpoints
+
+/**
+ * Used for breakpoint condition evaluation.
+ * xxxHonza: it's rather a hack since:
+ * 1) Firebug customizes the BreakpointActor to workaround Bug 812172
+ * 2) Firebug has custom breakpoint hit handler for dynamic breakpoints
+ * (see: firebug/debugger/script/sourceTool)
+ */
+DebuggerLib.evalBreakpointCondition = function(frame, bp)
+{
+    try
+    {
+        var result = frame.eval(bp.condition);
+
+        if (result.hasOwnProperty("return"))
+        {
+            result = result["return"];
+
+            if (typeof result  == "object")
+                return this.unwrapDebuggeeValue(result);
+            else
+                return result;
+        }
+    }
+    catch (e)
+    {
+        TraceError.sysout("breakpointActor.evalCondition; EXCEPTION " + e, e);
+    }
 };
 
 // ********************************************************************************************* //

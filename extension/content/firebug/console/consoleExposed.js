@@ -1,29 +1,37 @@
 /* See license.txt for terms of usage */
 
 define([
-    "firebug/chrome/reps",
+    "firebug/firebug",
+    "firebug/lib/trace",
     "firebug/lib/locale",
-    "firebug/lib/wrapper",
-    "firebug/lib/url",
-    "firebug/lib/string",
-    "firebug/debugger/stack/stackFrame",
-    "firebug/debugger/stack/stackTrace",
-    "firebug/console/errors",
-    "firebug/trace/debug",
-    "firebug/console/console",
     "firebug/lib/options",
-    "firebug/debugger/debuggerLib",
+    "firebug/lib/string",
+    "firebug/lib/url",
+    "firebug/lib/wrapper",
+    "firebug/chrome/reps",
+    "firebug/chrome/tableRep",
+    "firebug/console/console",
+    "firebug/console/errors",
     "firebug/console/errorMessageObj",
     "firebug/console/commands/profiler",
-    "firebug/chrome/tableRep",
+    "firebug/debugger/stack/stackFrame",
+    "firebug/debugger/stack/stackTrace",
+    "firebug/debugger/debuggerLib",
     "firebug/dom/domBaseTree",
+    "firebug/trace/debug",
 ],
-function(FirebugReps, Locale, Wrapper, Url, Str, StackFrame, StackTrace,
-    Errors, Debug, Console, Options, DebuggerLib, ErrorMessageObj, Profiler,
-    TableRep, DomBaseTree) {
+function(Firebug, FBTrace, Locale, Options, Str, Url, Wrapper, FirebugReps, TableRep,
+    Console, Errors, ErrorMessageObj, Profiler, StackFrame, StackTrace, DebuggerLib,
+    DomBaseTree, Debug) {
 
 // Note: since we are using .caller and .arguments for stack walking, we can not use strict mode.
 //"use strict";
+
+// ********************************************************************************************* //
+// Constants
+
+var TraceError = FBTrace.toError();
+var Trace = FBTrace.to("DBG_CONSOLE");
 
 // ********************************************************************************************* //
 
@@ -76,6 +84,7 @@ function createFirebugConsole(context, win)
             var rest = [];
             for (var i = 1; i < arguments.length; i++)
                 rest.push(arguments[i]);
+
             return logAssert("assert", rest);
         }
 
@@ -108,6 +117,8 @@ function createFirebugConsole(context, win)
     console.trace = function firebugDebuggerTracer()
     {
         var trace = getJSDUserStack();
+        if (!trace)
+            trace = getComponentsUserStack();
 
         // This should never happen, but inform the user if it does.
         if (!trace)
@@ -167,6 +178,7 @@ function createFirebugConsole(context, win)
             if (!strKey)
                 return Console.getDefaultReturnValue();
         }
+
         var id = emptyKey + " " + strKey;
 
         if (!context.frameCounters)
@@ -234,6 +246,7 @@ function createFirebugConsole(context, win)
 
             delete this.timeCounters[key];
         }
+
         return diff;
     };
 
@@ -241,14 +254,14 @@ function createFirebugConsole(context, win)
     {
         label = label || "";
 
-        if (FBTrace.DBG_CONSOLE)
-            FBTrace.sysout("consoleExposed.timeStamp; " + label);
+        Trace.sysout("consoleExposed.timeStamp; " + label);
 
         var now = new Date();
         Firebug.NetMonitor.addTimeStamp(context, now.getTime(), label);
 
         var formattedTime = now.getHours() + ":" + now.getMinutes() + ":" +
             now.getSeconds() + "." + now.getMilliseconds();
+
         return logFormatted([formattedTime, label], "timeStamp");
     };
 
@@ -331,24 +344,31 @@ function createFirebugConsole(context, win)
         if (msg && msg.stack)
         {
             trace = StackTrace.parseToStackTrace(msg.stack, context);
-            if (FBTrace.DBG_CONSOLE)
-                FBTrace.sysout("logAssert trace from msg.stack", trace);
+
+            Trace.sysout("logAssert trace from msg.stack", trace);
         }
         else
         {
             trace = getJSDUserStack();
-            if (FBTrace.DBG_CONSOLE)
-                FBTrace.sysout("logAssert trace from getJSDUserStack", trace);
+
+            Trace.sysout("logAssert trace from getJSDUserStack", trace);
+
+            if (!trace)
+            {
+                trace = getComponentsUserStack();
+                Trace.sysout("logAssert trace from getComponentsUserStack", trace);
+            }
         }
 
-        trace = StackFrame.cleanStackTraceOfFirebug(trace);
+        if (!trace || !trace.frames || !trace.frames.length)
+            trace = null;
 
         var url = msg && msg.fileName ? msg.fileName : win.location.href;
 
         // we may have only the line popped above
         var lineNo = (trace && msg && msg.lineNumber) ? msg.lineNumber : 0;
         var errorObject = new ErrorMessageObj(msg, url, lineNo, null, category, context, trace);
-        if (trace && trace.frames && trace.frames[0])
+        if (trace)
             errorObject.correctWithStackTrace(trace);
 
         errorObject.resetSource();
@@ -371,25 +391,24 @@ function createFirebugConsole(context, win)
     {
         // Starting with our stack, walk back to the user-level code
         var frame = Components.stack;
-        var userURL = win.location.href.toString();
+        var userURL = null;
 
-        if (FBTrace.DBG_CONSOLE)
-            FBTrace.sysout("consoleInjector.getComponentsStackDump initial stack for userURL " +
+        if (Trace.active)
+        {
+            userURL = win.location.href.toString();
+            Trace.sysout("consoleExposed.getComponentsStackDump initial stack for userURL " +
                 userURL, frame);
+        }
 
         // Drop frames until we get into user code.
-        while (frame && Url.isSystemURL(frame.filename) )
+        while (frame && Url.isSystemURL(frame.filename))
             frame = frame.caller;
 
-        // Drop two more frames, the injected console function and firebugAppendConsole()
-        //if (frame)
-        //    frame = frame.caller;
-        //if (frame)
-        //    frame = frame.caller;
-
-        if (FBTrace.DBG_CONSOLE)
-            FBTrace.sysout("consoleInjector.getComponentsStackDump final stack for userURL " +
+        if (Trace.active)
+        {
+            Trace.sysout("consoleExposed.getComponentsStackDump final stack for userURL " +
                 userURL, frame);
+        }
 
         return frame;
     }
@@ -397,48 +416,13 @@ function createFirebugConsole(context, win)
     function getStackLink()
     {
         var sourceLink = StackFrame.getFrameSourceLink(getComponentsStackDump());
+
         // xxxFlorent: should be reverted if we integrate 
         // https://github.com/fflorent/firebug/commit/d5c65e8 (related to issue6268)
         if (sourceLink && DebuggerLib.isFrameLocationEval(sourceLink.href))
             return null;
+
         return sourceLink;
-    }
-
-    function removeChromeFrames(trace)
-    {
-        var frames = trace ? trace.frames : null;
-        if (!frames || !frames.length)
-            return null;
-
-        var filteredFrames = [];
-        for (var i = 0; i < frames.length; i++)
-        {
-            if (Str.hasPrefix(frames[i].href, "chrome:"))
-                continue;
-
-            if (Str.hasPrefix(frames[i].href, "resource:"))
-                continue;
-
-            // firebug-service scope reached, in some cases the url starts with file://
-            if (frames[i].href.indexOf("modules/firebug-service.js") != -1)
-                continue;
-
-            // xxxFlorent: should be reverted if we integrate
-            // https://github.com/fflorent/firebug/commit/d5c65e8 (related to issue6268)
-            if (DebuggerLib.isFrameLocationEval(frames[i].href))
-                continue;
-
-            // command line
-            var fn = String(frames[i].getFunctionName());
-            if (fn && (fn.indexOf("_firebugEvalEvent") != -1))
-                continue;
-
-            filteredFrames.push(frames[i]);
-        }
-
-        trace.frames = filteredFrames;
-
-        return trace;
     }
 
     function getJSDUserStack()
@@ -446,7 +430,83 @@ function createFirebugConsole(context, win)
         if (!Firebug.Debugger.isAlwaysEnabled())
             return null;
         var trace = Firebug.Debugger.getCurrentStackTrace(context);
-        return removeChromeFrames(trace);
+        return StackFrame.removeChromeFrames(trace);
+    }
+
+    function getComponentsUserStack()
+    {
+        // Walk Components.stack and function.caller/arguments simultaneously.
+        var func = arguments.callee;
+        var seenFunctions = new Set();
+        seenFunctions.add(func);
+
+        var trace = new StackTrace();
+        var frame = Components.stack;
+        while (frame)
+        {
+            var fileName = frame.filename;
+            if (fileName)
+            {
+                var frameName = frame.name;
+                var args = [];
+                if (func)
+                {
+                    try
+                    {
+                        if (func.name && func.name !== frameName)
+                        {
+                            // Something is off, abort!
+                            func = null;
+                        }
+                        else
+                        {
+                            var argValues = Array.prototype.slice.call(func.arguments);
+                            var argNames =
+                                StackFrame.guessFunctionArgNamesFromSource(String(func));
+
+                            if (argNames && argNames.length === func.length)
+                            {
+                                for (var i = 0; i < func.length; i++)
+                                    args.push({name: argNames[i], value: argValues[i]});
+                            }
+                        }
+                    }
+                    catch (exc)
+                    {
+                        // strict mode etc.
+                    }
+                }
+
+                var sframe = new StackFrame({href: fileName},
+                    frame.lineNumber, frameName, args, null, null, context);
+                trace.frames.push(sframe);
+            }
+
+            frame = frame.caller;
+            if (func)
+            {
+                try
+                {
+                    func = func.caller;
+                    if (seenFunctions.has(func))
+                    {
+                        // Recursion; we cannot go on unfortunately.
+                        func = null;
+                    }
+                    else
+                    {
+                        seenFunctions.add(func);
+                    }
+                }
+                catch (exc)
+                {
+                    // Strict mode functions etc.
+                    func = null;
+                }
+            }
+        }
+
+        return StackFrame.removeChromeFrames(trace);
     }
 
     function getStackFrameId(inputFrame)

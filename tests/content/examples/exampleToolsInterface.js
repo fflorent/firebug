@@ -1,18 +1,13 @@
 function runTest()
 {
-    FBTest.sysout("exampleToolsInterface.START");
-
     // 1) Load test case page
     FBTest.openNewTab(basePath + "examples/exampleToolsInterface.html", function(win)
     {
         // 2) Open Firebug and enable the Script panel.
-        FBTest.openFirebug();
         FBTest.enableScriptPanel(function(win)
         {
             // 3) Select the Script panel
             var panel = FW.Firebug.chrome.selectPanel("script");
-
-
             var browser = new FW.Firebug.BTI.Browser();
             FBTest.ok(browser, "We created a browser");
 
@@ -28,7 +23,7 @@ function runTest()
                 FBTest.clickContinueButton();
 
                 // 5) Finish test.
-                FBTest.testDone("exampleToolsInterface.DONE");
+                FBTest.testDone();
             });
 
             // 4) Execute test by clicking on the 'Execute Test' button.
