@@ -1067,7 +1067,15 @@ function codeMirrorAutoComplete(context, allowGlobal, attemptedCompletionOut, ed
     {
         completer.completions.index = completion.index;
         var startOfLine = completer.getCompletionValue();
-        cm.setLine(line, startOfLine + wholeLine.substr(offset));
+        var from = {line: line, ch: 0};
+        var to = {line: line, ch: offset};
+
+        // Make |from| and |to| objects of the window of the editor, so CodeMirror can access
+        // their properties.
+        from = Wrapper.cloneIntoContentScope(sourceEditor.contentView, from);
+        to = Wrapper.cloneIntoContentScope(sourceEditor.contentView, to);
+
+        cm.replaceRange(startOfLine, from, to);
         cm.setCursor(line, startOfLine.length);
     };
     var cmCompletions = [];
