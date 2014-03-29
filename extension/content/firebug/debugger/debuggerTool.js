@@ -10,9 +10,8 @@ define([
     "firebug/chrome/tool",
     "firebug/debugger/stack/stackFrame",
     "firebug/debugger/stack/stackTrace",
-    "firebug/debugger/watch/returnValueModifier",
 ],
-function (Firebug, FBTrace, Obj, Options, Tool, StackFrame, StackTrace, ReturnValueModifier) {
+function (Firebug, FBTrace, Obj, Options, Tool, StackFrame, StackTrace) {
 
 "use strict";
 
@@ -248,9 +247,6 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             this.context.evalCallback(this.context, event, packet);
             this.context.evalCallback = null;
         }
-
-        // See the comments in that function.
-        ReturnValueModifier.fetchNewestFrame(this.context);
     },
 
     resumed: function()
@@ -352,6 +348,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
         {
             if (callback)
                 callback();
+            this.dispatch("onResumeDebugger", [this.context, limit, response]);
         });
     },
 

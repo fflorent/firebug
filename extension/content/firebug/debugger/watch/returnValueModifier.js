@@ -3,11 +3,14 @@
 /*global define:1*/
 
 define([
+    "firebug/firebug",
     "firebug/lib/trace",
     "firebug/lib/object",
     "firebug/chrome/module",
     "firebug/debugger/debuggerLib",
-], function(FBTrace, Obj, Module, DebuggerLib) {
+], function(Firebug, FBTrace, Obj, Module, DebuggerLib) {
+
+"use strict";
 
 // ********************************************************************************************* //
 // Constants
@@ -17,6 +20,7 @@ var Trace = FBTrace.to("DBG_RETURNVALUEMODIFIER");
 
 // ********************************************************************************************* //
 // Variables
+
 var wmUserReturnValues = new WeakMap();
 var wmDbg = new WeakMap();
 
@@ -28,6 +32,8 @@ var wmDbg = new WeakMap();
  */
 var ReturnValueModifier = Obj.extend(Module, {
 /** @lends BreakOnNext */
+
+    dispatchName: "ReturnValueModifier",
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     // Initialization
@@ -42,6 +48,7 @@ var ReturnValueModifier = Obj.extend(Module, {
     {
         var tool = context.getTool("debugger");
         tool.removeListener(this);
+        destroyDebuggerForContext(context);
     },
 
     setUserReturnValue: function(context, userReturnValue)
@@ -62,7 +69,7 @@ var ReturnValueModifier = Obj.extend(Module, {
             return;
         }
 
-        frame.onPop = this.onPopFrame.bind(this, frame);
+        frame.onPop = this.onPopFrame.bind(this, frame, context);
     },
 
     /**
@@ -103,24 +110,10 @@ var ReturnValueModifier = Obj.extend(Module, {
         return DebuggerLib.createValueGrip(context, dbgUserReturnValue);
     },
 
-    /**
-     * Fetches the newest frame so it is created when the user wants to change the return value.
-     * Should not be used elsewhere than in debugger/debuggerTool.
-     */
-    fetchNewestFrame: function(context)
-    {
-        // getNewestFrame() is a Singleton that creates a Frame object (if not done before) and
-        // returns it. We need to force that Frame object to be created now because the debugger
-        // fetches only the instances that have been created to call the "onPop" handlers. So when
-        // calling setReturnValue, it is too late to create that Frame object.
-        // Also see: http://ur1.ca/gc9dy
-        getDebugger(context).getNewestFrame();
-    },
-
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     // Debugger Listeners
 
-    onPopFrame: function(frame, completionValue)
+    onPopFrame: function(frame, context, completionValue)
     {
         if (!completionValue || !completionValue.hasOwnProperty("return"))
             return completionValue;
@@ -128,15 +121,29 @@ var ReturnValueModifier = Obj.extend(Module, {
         var userReturnValue = wmUserReturnValues.get(frame);
 
         var wrappedUserReturnValue = frame.callee.global.makeDebuggeeValue(userReturnValue);
+
+        // If the current frame is the oldest one, destroy the debugger after the completion value
+        // has been returned.
+        if (!frame.older)
+            setTimeout(destroyDebuggerForContext, 0, context);
+
         return {"return": wrappedUserReturnValue};
     },
 
-    onStopDebugging: function(context)
+    onStartDebugging: function(context)
     {
-        // A debugger degrades performance a bit. So destroy it when the debugger is resumed.
-        var dbg = wmDbg.get(context);
-        wmDbg.delete(context);
-        DebuggerLib.destroyDebuggerForContext(context, dbg);
+        // getNewestFrame() is a Singleton that creates a Frame object (if not done before) and
+        // returns it. We need to force that Frame object to be created while the debugger pauses
+        // because it fetches only the instances that have been created to call the "onPop"
+        // handlers. So when calling setReturnValue, it is too late to create that Frame object.
+        // Also see: http://ur1.ca/gc9dy
+        getDebugger(context).getNewestFrame();
+    },
+
+    onResumeDebugger: function(context)
+    {
+        // A debugger degrades performance a bit. So destroy it when the user resumes it.
+        destroyDebuggerForContext(context);
     },
 
 });
@@ -152,11 +159,36 @@ function getDebugger(context)
         dbg = DebuggerLib.makeDebuggerForContext(context);
         wmDbg.set(context, dbg);
     }
+
+    var oldestFrame = getOldestFrame(dbg.getNewestFrame());
+    if (!oldestFrame.onPop)
+        oldestFrame.onPop = destroyDebuggerForContext.bind(null, context);
+
     return dbg;
 }
 
+function getOldestFrame(frame)
+{
+    var curFrame = frame;
+    while (curFrame.older)
+        curFrame = curFrame.older;
+
+    return curFrame;
+}
+
+function destroyDebuggerForContext(context)
+{
+    var dbg = wmDbg.get(context);
+    if (!dbg)
+        return;
+    Trace.sysout("ReturnValueModifier.destroyDebuggerForContext", context);
+    wmDbg.delete(context);
+    DebuggerLib.destroyDebuggerForContext(context, dbg);
+}
 // ********************************************************************************************* //
 // Registration
+
+Firebug.registerModule(ReturnValueModifier);
 
 return ReturnValueModifier;
 
