@@ -1,9 +1,7 @@
 function runTest()
 {
-    FBTest.sysout("issue6855.START");
     FBTest.openNewTab(basePath + "script/watch/6855/issue6855.html", function(win)
     {
-        FBTest.openFirebug();
         FBTest.enableScriptPanel(function()
         {
             var tasks = new FBTest.TaskList();
@@ -34,7 +32,7 @@ function runTest()
             tasks.wrapAndPush(FBTest.clickContinueButton);
             tasks.run(function()
             {
-                FBTest.testDone("issue6855.DONE");
+                FBTest.testDone();
             });
         });
     });

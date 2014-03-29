@@ -21,12 +21,15 @@
 /*************************************************************************************************/
 /* Command Line */
 
+#fbCommandArrow,
+.fbCommandLine {
+    font-family: monospace;
+    font-size: 10px;
+}
+
 #fbCommandArrow {
     margin-left: 7px;
-    font-family: monospace;
     color: #0000FF;
-    line-height: 0;
-    padding: 2px 0;
 }
 
 .fbCommandLine {
@@ -34,8 +37,6 @@
     margin: 0 0 0 4px !important;
     padding: 2px 0 !important;
     border: none;
-    font-family: monospace;
-    font-size: 12px;
     direction: ltr;
     width: 100%;
     background: none repeat scroll 0% 0% transparent;
@@ -102,7 +103,6 @@
 .fbCommandHtmlBox .background {
     position: relative;
     background: none repeat scroll 0% 0% transparent;
-    line-height: 0;
     vertical-align: middle;
 }
 
@@ -614,7 +614,8 @@ toolbarbutton:-moz-any([checked="true"],
 toolbarbutton:-moz-any([checked="true"],
                        [selected="true"],
                        [open="true"]):not(.panelStatusLabel):not([disabled="true"]):not([type=menu-button]) {
-    background: transparent linear-gradient(rgba(0, 0, 0, 0.1), transparent) no-repeat;
+    background-image: linear-gradient(rgba(0, 0, 0, 0.1), transparent);
+    background-repeat: no-repeat;
 }
 
 toolbarbutton:hover:active:not([disabled="true"]) {
@@ -623,7 +624,8 @@ toolbarbutton:hover:active:not([disabled="true"]) {
 }
 
 toolbarbutton:hover:active:not([disabled="true"]):not([type=menu-button]) {
-    background: transparent linear-gradient(rgba(0, 0, 0, 0.2), transparent) no-repeat;
+    background-image: linear-gradient(rgba(0, 0, 0, 0.2), transparent);
+    background-repeat: no-repeat;
 }
 
 toolbarbutton[type="menu-button"] {
