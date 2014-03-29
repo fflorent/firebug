@@ -16,6 +16,7 @@ define([
     "firebug/lib/string",
     "firebug/lib/wrapper",
     "firebug/debugger/stack/stackFrame",
+    "firebug/debugger/watch/returnValueModifier",
     "firebug/debugger/watch/watchEditor",
     "firebug/debugger/watch/watchTree",
     "firebug/debugger/watch/watchProvider",
@@ -25,8 +26,8 @@ define([
     "firebug/console/commandLine",
 ],
 function(Firebug, FBTrace, Obj, Domplate, Firefox, ToggleBranch, Events, Dom, Css, Arr, Menu,
-    Locale, Str, Wrapper, StackFrame, WatchEditor, WatchTree, WatchProvider, WatchExpression,
-    DOMBasePanel, ErrorCopy, CommandLine) {
+    Locale, Str, Wrapper, StackFrame, ReturnValueModifier, WatchEditor, WatchTree, WatchProvider,
+    WatchExpression, DOMBasePanel, ErrorCopy, CommandLine) {
 
 "use strict";
 
@@ -829,7 +830,7 @@ WatchPanel.prototype = Obj.extend(BasePanel,
             this.defaultTree.saveState(this.defaultToggles);
 
         var member = row.domObject;
-        if (member && member.value && member.value.isFrameResultValue)
+        if (member && (member.value instanceof WatchProvider.FrameResultObject))
             this.setPropertyReturnValue(member, value);
         else
             BasePanel.setPropertyValue.apply(this, arguments);
@@ -840,7 +841,7 @@ WatchPanel.prototype = Obj.extend(BasePanel,
         var onSuccess = (result, context) =>
         {
             Trace.sysout("watchPanel.setPropertyReturnValue; evaluate success", result);
-            this.tool.setUserReturnValue(result);
+            ReturnValueModifier.setUserReturnValue(context, result);
         };
 
         var onFailure = (exc, context) =>
@@ -849,7 +850,7 @@ WatchPanel.prototype = Obj.extend(BasePanel,
             try
             {
                 // See DomBasePanel.setPropertyValue for the explanation.
-                this.tool.setUserReturnValue(value);
+                ReturnValueModifier.setUserReturnValue(context, value);
             }
             catch (exc)
             {
@@ -881,7 +882,7 @@ WatchPanel.prototype = Obj.extend(BasePanel,
     getRowPropertyValue: function(row)
     {
         var member = row.domObject;
-        if (member && member.value && member.value.isFrameResultValue)
+        if (member && (member.value instanceof WatchProvider.FrameResultObject))
             return this.provider.getValue(member.value);
 
         return BasePanel.getRowPropertyValue.apply(this, arguments);

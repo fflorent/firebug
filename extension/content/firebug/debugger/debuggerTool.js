@@ -10,8 +10,9 @@ define([
     "firebug/chrome/tool",
     "firebug/debugger/stack/stackFrame",
     "firebug/debugger/stack/stackTrace",
+    "firebug/debugger/watch/returnValueModifier",
 ],
-function (Firebug, FBTrace, Obj, Options, Tool, StackFrame, StackTrace) {
+function (Firebug, FBTrace, Obj, Options, Tool, StackFrame, StackTrace, ReturnValueModifier) {
 
 "use strict";
 
@@ -20,10 +21,6 @@ function (Firebug, FBTrace, Obj, Options, Tool, StackFrame, StackTrace) {
 
 var TraceError = FBTrace.toError();
 var Trace = FBTrace.to("DBG_DEBUGGERTOOL");
-
-// ********************************************************************************************* //
-// Variables
-var wmUserReturnValues = new WeakMap();
 
 // ********************************************************************************************* //
 // Debugger Tool
@@ -99,65 +96,6 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 
         // Detach client-thread listeners.
         this.detachListeners();
-    },
-
-    setUserReturnValue: function(userReturnValue)
-    {
-        var frame = this._getDebugger().getNewestFrame();
-        if (!frame)
-        {
-            TraceError.sysout("debuggerTool.setReturnValue; newest frame not found");
-            return;
-        }
-
-        // Note: userReturnValue is not a grip, so undefined and null are valid values.
-        wmUserReturnValues.set(frame, userReturnValue);
-
-        if (frame.onPop)
-        {
-            Trace.sysout("debuggerTool.attachOnPopToTopFrame; frame.onPop already attached");
-            return;
-        }
-
-        frame.onPop = this.onPopFrame.bind(this, frame);
-    },
-
-    /**
-     * Returns the return value set by the user, as follow:
-     * - If there is no return value, return {"found": false}
-     * - If there is, return an object of this form: {"userReturnValue": returnValue, "found": true}
-     *
-     * Note that the return value can be null or undefined. That's why an object is returned
-     * in any case with the "found" property.
-     *
-     * @return {Object} The object has described above.
-     */
-    getUserReturnValue: function()
-    {
-        var frame = this._getDebugger().getNewestFrame();
-        if (!frame || !wmUserReturnValues.has(frame))
-            return {"found": false};
-
-        var userReturnValue = wmUserReturnValues.get(frame);
-
-        return {"found": true, "userReturnValue": userReturnValue};
-    },
-
-    /**
-     * Gets the return value set by the user as a Grip, or null if not found.
-     * Note: if the user has set it to null, the grip would be {type: "null"}.
-     *
-     * @return {Grip} The return value grip or null if not found.
-     */
-    getUserReturnValueAsGrip: function()
-    {
-        var {userReturnValue, found} = this.getUserReturnValue();
-        if (!found)
-            return null;
-
-        var dbgGlobal = DebuggerLib.getThreadActor(this.context.browser).globalDebugObject;
-        var dbgUserReturnValue = dbgGlobal.makeDebuggeeValue(userReturnValue);
-        return DebuggerLib.createValueGrip(this.context, dbgUserReturnValue);
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -311,12 +249,8 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             this.context.evalCallback = null;
         }
 
-        // getNewestFrame() is a Singleton that creates a Frame object (if not done before) and
-        // returns it. We need to force that Frame object to be created now because the debugger
-        // fetches only the instances that have been created to call the "onPop" handlers. So when
-        // calling setReturnValue, it is too late to create that Frame object.
-        // Also see: http://ur1.ca/gc9dy
-        this._getDebugger().getNewestFrame();
+        // See the comments in that function.
+        ReturnValueModifier.fetchNewestFrame(this.context);
     },
 
     resumed: function()
@@ -351,20 +285,6 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 
         if (this.context.clientCache)
             this.context.clientCache.clear();
-    },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-    // Debugger Listeners
-
-    onPopFrame: function(frame, completionValue)
-    {
-        if (!completionValue || !completionValue.hasOwnProperty("return"))
-            return completionValue;
-
-        var userReturnValue = wmUserReturnValues.get(frame);
-
-        var wrappedUserReturnValue = frame.callee.global.makeDebuggeeValue(userReturnValue);
-        return {"return": wrappedUserReturnValue};
     },
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -578,10 +498,6 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
         });
     },
 });
-
-// ********************************************************************************************* //
-// Helpers
-
 
 // ********************************************************************************************* //
 // Registration

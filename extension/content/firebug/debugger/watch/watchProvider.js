@@ -11,10 +11,11 @@ define([
     "firebug/debugger/clients/clientProvider",
     "firebug/debugger/clients/scopeClient",
     "firebug/debugger/clients/grip",
+    "firebug/debugger/watch/returnValueModifier",
     "firebug/debugger/watch/watchExpression",
 ],
 function (FBTrace, Obj, Locale, Wrapper, DOMMemberProvider, DebuggerLib, StackFrame,
-    ClientProvider, ScopeClient, Grip, WatchExpression) {
+    ClientProvider, ScopeClient, Grip, ReturnValueModifier, WatchExpression) {
 
 "use strict";
 
@@ -224,13 +225,14 @@ WatchProvider.prototype = Obj.extend(BaseProvider,
     getFrameResultObject: function(stackFrame, cache)
     {
         var frameResultObj = null;
+        var context = stackFrame.context;
 
-        var debuggerTool = stackFrame.context.getTool("debugger");
+        var debuggerTool = context.getTool("debugger");
         // Note: It returns null iif the value is not found (null is not a valid grip).
-        var userReturnValue = debuggerTool.getUserReturnValueAsGrip();
+        var userReturnValue = ReturnValueModifier.getUserReturnValueAsGrip(context);
 
         if (userReturnValue == null)
-            frameResultObj = DebuggerLib.getFrameResultObject(stackFrame.context);
+            frameResultObj = DebuggerLib.getFrameResultObject(context);
         else
             frameResultObj = {type: "return", value: userReturnValue};
 
@@ -241,14 +243,12 @@ WatchProvider.prototype = Obj.extend(BaseProvider,
 
         // Create an object that represents the frame-result value in the {@link WatchPanel}.
         var clientObject = cache.getObject(frameResultObj.value);
-        clientObject.name = Locale.$STR("watch.frameResultType." + frameResultObj.type);
-        clientObject.isFrameResultValue = true;
 
         // Make exceptions readonly.
-        clientObject.readOnly = (frameResultObj.type === "exception");
+        var readOnly = (frameResultObj.type === "exception");
 
         var resultObject = new WatchProvider.FrameResultObject(
-            clientObject, frameResultObj.type);
+            clientObject, frameResultObj.type, readOnly);
 
         Trace.sysout("watchProvider.getFrameResultObject; object:", clientObject);
 
@@ -259,10 +259,10 @@ WatchProvider.prototype = Obj.extend(BaseProvider,
 // ********************************************************************************************* //
 // Return Value Object
 
-WatchProvider.FrameResultObject = function(value, type)
+WatchProvider.FrameResultObject = function(value, type, readOnly)
 {
     this.value = value;
-    this.readOnly = true;
+    this.readOnly = !!readOnly;
     this.name = Locale.$STR("watch.frameResultType." + type);
 }
 
