@@ -1,21 +1,17 @@
 /* See license.txt for terms of usage */
+/*jshint noempty:false, esnext:true, curly:false, moz:true*/
+/*global define:1*/
 
 define([
     "firebug/firebug",
     "firebug/lib/trace",
     "firebug/lib/object",
-    "firebug/lib/array",
     "firebug/lib/options",
     "firebug/chrome/tool",
-    "firebug/debugger/debuggerLib",
-    "firebug/debugger/debugger",
     "firebug/debugger/stack/stackFrame",
     "firebug/debugger/stack/stackTrace",
-    "firebug/debugger/clients/clientCache",
-    "arch/compilationunit",
 ],
-function (Firebug, FBTrace, Obj, Arr, Options, Tool, DebuggerLib, Debugger, StackFrame, StackTrace,
-    ClientCache, CompilationUnit) {
+function (Firebug, FBTrace, Obj, Options, Tool, StackFrame, StackTrace) {
 
 "use strict";
 
@@ -103,21 +99,6 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 
         // Detach client-thread listeners.
         this.detachListeners();
-    },
-
-    /**
-     * If enabled = true, enable the onEnterFrame callback for BreakOnNext.
-     * Otherwise, disable it to avoid performance penalty.
-     *
-     * @param enabled
-     */
-    breakOnNext: function(enabled)
-    {
-        var dbg = this._getDebugger();
-        if (enabled)
-            dbg.onEnterFrame = this.onEnterFrame.bind(this);
-        else
-            dbg.onEnterFrame = undefined;
     },
 
     setUserReturnValue: function(userReturnValue)
@@ -287,7 +268,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
         this.context.currentPauseActor = packet.actor;
 
         // Notify listeners, about debugger pause event.
-        this.dispatch("onDebuggerPaused", [this.context, event, packet])
+        this.dispatch("onDebuggerPaused", [this.context, event, packet]);
 
         // Send event allowing immediate resume. If at least one listener returns
         // true, the debugger will resume.
@@ -343,6 +324,8 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
         Trace.sysout("debuggerTool.resumed; currently stopped: " +
             this.context.stopped, arguments);
 
+        Firebug.dispatchEvent(this.context.browser, "onResumed");
+
         // When Firebug is attached to the {@link ThreadClient} object the debugger is paused.
         // As soon as all initialization steps are done {@link TabClient} resumes the
         // debugger. In such case the {@link TabContext} object isn't stopped and there is no
@@ -372,18 +355,6 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
 
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
     // Debugger Listeners
-
-    onEnterFrame: function(frame)
-    {
-        // Note: for inline event handler, frame.type also equals to "call".
-        if (frame.type === "call")
-        {
-            Trace.sysout("debuggerTool.onEnterFrame; triggering BreakOnNext");
-            // Note: Break On Next (and the onEnterFrame callback) will be disabled in
-            // ScriptPanel.prototype.onStartDebugging, called when the debugger is paused.
-            Debugger.breakNow(this.context, frame);
-        }
-    },
 
     onPopFrame: function(frame, completionValue)
     {
@@ -557,7 +528,7 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             {
                 TraceError.sysout("debuggerTool.evalCallback; EXCEPTION " + e, e);
             }
-        }
+        };
     },
 
     // xxxHonza: used to get boolean result of evaluated breakpoint condition
@@ -600,23 +571,11 @@ DebuggerTool.prototype = Obj.extend(new Tool(),
             Trace.sysout("debuggerTool.updateBreakOnErrors; response received:", response);
         });
     },
-
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-    // Local Helpers
-    /**
-     * Singleton to get the Debugger Object.
-     */
-    _getDebugger: function()
-    {
-        if (!this._dbg)
-        {
-            Trace.sysout("DebuggerTool._getDebugger; create new Debugger instance");
-            this._dbg = DebuggerLib.makeDebuggerForContext(this.context);
-        }
-        return this._dbg;
-    },
-
 });
+
+// ********************************************************************************************* //
+// Helpers
+
 
 // ********************************************************************************************* //
 // Registration

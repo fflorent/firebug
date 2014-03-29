@@ -22,9 +22,6 @@ var pre27 = (comparator.compare(appInfo.version, "27.0*") < 0);
 var global = Cu.getGlobalForObject({});
 Cu.import("resource://gre/modules/jsdebugger.jsm", {}).addDebuggerToGlobal(global);
 
-// Debuggees
-var dbgGlobalWeakMap = new WeakMap();
-
 // Module object
 var DebuggerLib = {};
 
@@ -67,7 +64,9 @@ DebuggerLib.getInactiveDebuggeeGlobal = function(context, global)
 {
     global = global || context.getCurrentGlobal();
 
-    var dbgGlobal = dbgGlobalWeakMap.get(global.document);
+    if (!context.inactiveDbgGlobalWeakMap)
+        context.inactiveDbgGlobalWeakMap = new WeakMap();
+    var dbgGlobal = context.inactiveDbgGlobalWeakMap.get(global.document);
     if (!dbgGlobal)
     {
         var dbg = getInactiveDebuggerForContext(context);
@@ -87,7 +86,7 @@ DebuggerLib.getInactiveDebuggeeGlobal = function(context, global)
             dbgGlobal = dbg.addDebuggee(contentView);
             dbg.removeDebuggee(contentView);
         }
-        dbgGlobalWeakMap.set(global.document, dbgGlobal);
+        context.inactiveDbgGlobalWeakMap.set(global.document, dbgGlobal);
 
         if (FBTrace.DBG_DEBUGGER)
             FBTrace.sysout("new debuggee global instance created", dbgGlobal);
@@ -103,9 +102,6 @@ DebuggerLib._closureInspectionRequiresDebugger = function()
 
 /**
  * Runs a callback with a debugger for a global temporarily enabled.
- *
- * Currently this throws an exception unless the Script panel is enabled, because
- * otherwise debug GCs kill us.
  */
 DebuggerLib.withTemporaryDebugger = function(context, global, callback)
 {
@@ -180,7 +176,7 @@ DebuggerLib.getObject = function(context, actorId)
     }
 };
 
-DebuggerLib.getThreadActor = function(browser)
+DebuggerLib.getTabActor = function(browser)
 {
     try
     {
@@ -188,7 +184,19 @@ DebuggerLib.getThreadActor = function(browser)
         // See: https://bugzilla.mozilla.org/show_bug.cgi?id=878472
         var conn = Firebug.debuggerClient._transport._serverConnection;
         var tabList = conn.rootActor._parameters.tabList;
-        var tabActor = tabList._actorByBrowser.get(browser);
+        return tabList._actorByBrowser.get(browser);
+    }
+    catch (e)
+    {
+        TraceError.sysout("debuggerClient.getObject; EXCEPTION " + e, e);
+    }
+};
+
+DebuggerLib.getThreadActor = function(browser)
+{
+    try
+    {
+        var tabActor = this.getTabActor(browser);
         if (!tabActor)
             return null;
 
