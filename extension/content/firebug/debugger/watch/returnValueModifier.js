@@ -122,11 +122,6 @@ var ReturnValueModifier = Obj.extend(Module, {
 
         var wrappedUserReturnValue = frame.callee.global.makeDebuggeeValue(userReturnValue);
 
-        // If the current frame is the oldest one, destroy the debugger after the completion value
-        // has been returned.
-        if (!frame.older)
-            setTimeout(destroyDebuggerForContext, 0, context);
-
         return {"return": wrappedUserReturnValue};
     },
 
@@ -158,11 +153,12 @@ function getDebugger(context)
     {
         dbg = DebuggerLib.makeDebuggerForContext(context);
         wmDbg.set(context, dbg);
-    }
 
-    var oldestFrame = getOldestFrame(dbg.getNewestFrame());
-    if (!oldestFrame.onPop)
+        // Make sure that the debugger is destroyed when the oldest frame is popped,
+        // so we prevent useless performance penalty due to an active debugger.
+        var oldestFrame = getOldestFrame(dbg.getNewestFrame());
         oldestFrame.onPop = destroyDebuggerForContext.bind(null, context);
+    }
 
     return dbg;
 }
