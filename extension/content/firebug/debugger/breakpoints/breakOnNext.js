@@ -27,7 +27,7 @@ var Trace = FBTrace.to("DBG_BREAKONNEXT");
 /**
  * @module Implements core logic for BON (Break On Next JS execution) feature. Instances
  * of the {@link Panel} object can customize this feature using the following API.
- * 
+ *
  * {@link Panel.supportsBreakOnNext}
  * {@link Panel.breakOnNext}
  * {@link Panel.shouldBreakOnNext}
@@ -204,6 +204,9 @@ function onEnterFrame(context, frame)
  */
 function isFrameInlineEvent(frame)
 {
+    // xxxHonza: We could probably simplify the code a lot by using introductionType
+    // (suggested by Simon).
+
     // Hack: we don't know whether the frame is created from an inline event attribute using the
     // frame properties. As a workaround, check if the name of the callee begins with "on", that
     // an attribute of the name of the callee exists and compare if |this[callee.name] === callee|.

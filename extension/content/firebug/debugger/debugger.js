@@ -76,7 +76,7 @@ Firebug.Debugger = Obj.extend(ActivableModule,
             Firebug.chrome.$(id).setAttribute("tooltiptext", tooltip);
         };
 
-        // Commented until Debugger.Frame.prototype.replaceCall is implemented. 
+        // Commented until Debugger.Frame.prototype.replaceCall is implemented.
         // See issue 6789 + bugzilla #976708.
         // setTooltip("fbRerunButton", "script.Rerun", "Shift+F8");
         setTooltip("fbContinueButton", "script.Continue", "F8");
@@ -667,6 +667,18 @@ Firebug.Debugger = Obj.extend(ActivableModule,
     {
         Firebug.connection.removeListener(listener);
     },
+
+    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+    onSourceLoaded: function(sourceFile, lines)
+    {
+        Trace.sysout("debugger.SourceLoaded; " + sourceFile.href);
+
+        // Delegate the event to the Script panel.
+        var panel = sourceFile.context.getPanel("script");
+        if (panel)
+            panel.onSourceLoaded(sourceFile, lines);
+    }
 });
 
 // ********************************************************************************************* //

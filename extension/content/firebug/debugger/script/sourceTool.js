@@ -158,7 +158,7 @@ SourceTool.prototype = Obj.extend(new Tool(),
         // Create a source file and append it into the context. This is the only
         // place where an instance of {@link SourceFile} is created.
         var sourceFile = new SourceFile(this.context, script.actor, script.url,
-            script.isBlackBoxed);
+            script.isBlackBoxed, script.isPrettyPrinted);
 
         this.context.addSourceFile(sourceFile);
 
@@ -285,7 +285,7 @@ function DynamicSourceCollector(sourceTool)
 
 /**
  * xxxHonza: workaround for missing RDP 'newSource' packets.
- * 
+ *
  * This object uses backend Debugger instance |threadActor.dbg| to hook script creation
  * (onNewScript callback). This way we can collect even all dynamically created scripts
  * (which are currently not send over RDP) and populate the current {@link TabContext}
@@ -401,7 +401,7 @@ DynamicSourceCollector.prototype =
         if (!sourceFile)
         {
             // xxxHonza: there should be only one place where instance of SourceFile is created.
-            var sourceFile = new SourceFile(this.context, null, url, false);
+            var sourceFile = new SourceFile(this.context, null, url, false, false);
 
             // xxxHonza: duplicated from {@link SourceFile}
             var source = script.source.text.replace(/\r\n/gm, "\n");
