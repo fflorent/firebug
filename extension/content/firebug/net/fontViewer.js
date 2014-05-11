@@ -8,6 +8,7 @@ define([
     "firebug/lib/locale",
     "firebug/lib/xpcom",
     "firebug/lib/events",
+    "firebug/lib/wrapper",
     "firebug/chrome/window",
     "firebug/lib/css",
     "firebug/lib/dom",
@@ -18,8 +19,8 @@ define([
     "firebug/net/netUtils",
     "firebug/lib/options"
 ],
-function(Module, Obj, Firebug, Domplate, Locale, Xpcom, Events, Win, Css, Dom, Str, Fonts, Url,
-    Http, NetUtils, Options) {
+function(Module, Obj, Firebug, Domplate, Locale, Xpcom, Events, Wrapper, Win, Css, Dom, Str, Fonts,
+    Url, Http, NetUtils, Options) {
 
 // ********************************************************************************************* //
 // Constants
@@ -119,24 +120,23 @@ Firebug.FontViewerModel = Obj.extend(Module,
     parseFont: function(file)
     {
         var context = Firebug.currentContext;
-        // xxxFlorent: context.window should always be the toppest inner-window, isn't it?
-        // xxxFlorent: Is there a way to get the <style> element requesting this font?
-        var rootWin = context.window.top;
+        var rootWin = context.window;
         var fontObject = null;
+        var stopIteration = Object.create(null);
         try
         {
             Win.iterateWindows(rootWin, function(win)
             {
                 fontObject = Fonts.getFontInfo(context, win, file.href);
-                // If the fontObject has been found, throw StopIteration to stop the iterations.
+                // If the fontObject has been found, throw stopIteration to stop the iterations.
                 if (fontObject)
-                    throw StopIteration;
+                    throw stopIteration;
             });
         }
         catch (ex)
         {
-            // Ignore if the exception if StopIteration. Otherwise, throw the exception.
-            if (ex !== StopIteration)
+            // Ignore if the exception if stopIteration. Otherwise, throw the exception.
+            if (ex !== stopIteration)
                 throw ex;
         }
         return fontObject;
@@ -698,15 +698,18 @@ Firebug.FontViewerModel.Preview = domplate(
      */
     render: function(body, file, context)
     {
-        var fontObject = file.fontObject;
+        var fontObject = Wrapper.wrapObject(file.fontObject);
         if (!fontObject)
             return;
 
         var styles = [10, 14, 18];
         var charTypes = ["lowercase", "uppercase", "numbersAndSpecialChars"];
 
+        FBTrace.sysout("body", body);
+        FBTrace.sysout("fontObject", fontObject);
+        FBTrace.sysout("this", this);
         var node = this.bodyTag.replace({fontObject: fontObject, styles: styles,
-            charTypes: charTypes}, body, this);
+            charTypes: charTypes}, Wrapper.wrapObject(body), Wrapper.wrapObject(this));
 
         var styleNode = node.getElementsByClassName("fontInfoPreviewStyle").item(0);
         styleNode.textContent = this.getFontFaceCss(fontObject);
