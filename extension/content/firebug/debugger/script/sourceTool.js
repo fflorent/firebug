@@ -396,7 +396,7 @@ DynamicSourceCollector.prototype =
             }
             catch (err)
             {
-                TraceError.sysout("sourceToo.onNewScript; ERROR " + err, err);
+                TraceError.sysout("sourceTool.onNewScript; ERROR " + err, err);
             }
         }
         else
@@ -417,6 +417,36 @@ DynamicSourceCollector.prototype =
         // Dynamic scripts use unique URL that is composed from script's location
         // such as line and column number.
         var url = computeDynamicUrl(script, this.context);
+
+        // Eval Scripts are cached so if they contains the same expression, the same
+        // Script object is reused. Hack so addDynamicScript is called again and breakpoints
+        // are hit.
+        if (type === "eval")
+        {
+            var firstRun = true;
+            var handler;
+            FBTrace.sysout("!!!setting breakpoint", script.getAllOffsets());
+            script.setBreakpoint(0, handler = {hit: (frame) =>
+            {
+                try {
+                FBTrace.sysout("!!!breakpoint hit", handler);
+                setTimeout(() => script.setBreakpoint(0, {hit: handler.hit}), 10);
+                if (firstRun)
+                {
+                    firstRun = false;
+                    return;
+                }
+                FBTrace.sysout("!!!The Holy Graal is here");
+                Trace.sysout("sourceTool.addDynamicScript; eval Script is reused, call " +
+                    "addDynamicScript() as if it were a new object.", frame.script);
+
+                this.addDynamicScript(frame.script, "eval");
+                } catch(ex) { FBTrace.sysout("!!!err2", ex)}
+                // Resume the execution.
+                return undefined;
+            }});
+            FBTrace.sysout("!!!bp set");
+        }
 
         // Tracing logs the script object itself and it can take a lot of memory
         // in case of bigger dynamic web applications.
